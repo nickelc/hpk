@@ -7,6 +7,7 @@ use std::str;
 use std::path::{Path, PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use libflate::zlib;
 
 static HEADER_IDENTIFIER: [u8; 4] = ['B' as u8, 'P' as u8, 'U' as u8, 'L' as u8];
 pub static HEADER_LENGTH: u8 = 36;
@@ -218,6 +219,23 @@ impl CompressionHeader {
             Err(())
         }
     }
+
+    fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<()> {
+        const CHUNK_SIZE: i32 = 32768;
+        const HDR_SIZE: i32 = 12;
+
+        out.write("ZLIB".as_bytes())?;
+        out.write_u32::<LittleEndian>(inflated_length)?;
+        out.write_i32::<LittleEndian>(CHUNK_SIZE)?;
+
+        let offsets_size = offsets.len() as i32 * 4;
+        let offsets = offsets.iter().map(|x| HDR_SIZE + offsets_size + x);
+        for offset in offsets {
+            out.write_i32::<LittleEndian>(offset)?;
+        }
+
+        Ok(())
+    }
 }
 
 fn read_identifier(r: &mut Read) -> [u8; 4]  {
@@ -305,6 +323,68 @@ pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
 
     return Ok(());
 
+    fn write_file(file: PathBuf, out: &mut File) -> io::Result<Fragment> {
+        const CHUNK_SIZE: u64 = 32768;
+        let extensions = vec!["lst", "lua", "xml", "tga", "dds", "xtex", "bin", "csv"];
+
+        let compress = file.extension()
+            .map(|e| extensions.contains(&e.to_str().unwrap()))
+            .unwrap_or(false);
+
+        if compress {
+            let length = file.metadata()?.len();
+            let mut file = File::open(file)?;
+            let mut output_buffer = vec![];
+            let mut offsets = vec![];
+
+            loop {
+                let position = output_buffer.len() as i32;
+                offsets.push(position);
+
+                let mut chunk = vec![];
+                let mut t = file.take(CHUNK_SIZE);
+                io::copy(&mut t, &mut chunk)?;
+                file = t.into_inner();
+
+                let mut encoder = zlib::Encoder::new(vec![])?;
+                let mut chunk = Cursor::new(chunk);
+                io::copy(&mut chunk, &mut encoder)?;
+
+                match encoder.finish().into_result() {
+                    Ok(ref buf) if buf.len() as u64 == CHUNK_SIZE => {
+                        io::copy(&mut chunk, &mut output_buffer)?;
+                    },
+                    Ok(buf) => {
+                        let mut buf = Cursor::new(buf);
+                        io::copy(&mut buf, &mut output_buffer)?;
+                    },
+                    Err(_) => {},
+                };
+
+                if file.seek(SeekFrom::Current(0))? == length {
+                    break;
+                }
+            }
+
+            let position = out.seek(SeekFrom::Current(0))?;
+
+            CompressionHeader::write(length as u32, offsets, out)?;
+            io::copy(&mut Cursor::new(output_buffer), out)?;
+
+            let current_pos = out.seek(SeekFrom::Current(0))?;
+
+            Ok(Fragment::new(position, current_pos - position))
+
+        } else {
+            let position = out.seek(SeekFrom::Current(0))?;
+            let mut input = File::open(file)?;
+            io::copy(&mut input, out)?;
+            let current_pos = out.seek(SeekFrom::Current(0))?;
+
+            Ok(Fragment::new(position, current_pos - position))
+        }
+    }
+
     fn walk_dir(dir: PathBuf, fragments: &mut Vec<Fragment>, out: &mut File) -> io::Result<Fragment> {
         let entries = dir.read_dir()?;
         let mut paths = entries.map(|e| e.unwrap().path()).collect::<Vec<_>>();
@@ -329,12 +409,7 @@ pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
                 file_entry.write(&mut dir_buffer)?;
 
             } else {
-                let position = out.seek(SeekFrom::Current(0))?;
-                let mut input = File::open(entry)?;
-                io::copy(&mut input, out)?;
-                let current_pos = out.seek(SeekFrom::Current(0))?;
-
-                let fragment = Fragment::new(position, current_pos - position);
+                let fragment = write_file(entry, out)?;
                 fragments.push(fragment);
 
                 let file_entry = FileEntry::new_file(
