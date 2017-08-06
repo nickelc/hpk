@@ -7,7 +7,8 @@ use std::str;
 use std::path::{Path, PathBuf};
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use libflate::zlib;
+use flate2::Compression;
+use flate2::write::ZlibEncoder;
 
 static HEADER_IDENTIFIER: [u8; 4] = ['B' as u8, 'P' as u8, 'U' as u8, 'L' as u8];
 pub static HEADER_LENGTH: u8 = 36;
@@ -346,11 +347,11 @@ pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
                 io::copy(&mut t, &mut chunk)?;
                 file = t.into_inner();
 
-                let mut encoder = zlib::Encoder::new(vec![])?;
+                let mut encoder = ZlibEncoder::new(vec![], Compression::Best);
                 let mut chunk = Cursor::new(chunk);
                 io::copy(&mut chunk, &mut encoder)?;
 
-                match encoder.finish().into_result() {
+                match encoder.finish() {
                     Ok(ref buf) if buf.len() as u64 == CHUNK_SIZE => {
                         io::copy(&mut chunk, &mut output_buffer)?;
                     },

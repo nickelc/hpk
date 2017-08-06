@@ -1,5 +1,5 @@
 extern crate byteorder;
-extern crate libflate;
+extern crate flate2;
 #[macro_use]
 extern crate clap;
 

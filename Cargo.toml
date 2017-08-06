@@ -5,7 +5,7 @@ authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 
 [dependencies]
 byteorder = "1.1"
-libflate = "0.1"
+flate2 = "0.2"
 tempdir = "0.3"
 
 [dependencies.clap]

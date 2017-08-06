@@ -4,7 +4,9 @@ use std::io::SeekFrom;
 use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
-use libflate::zlib;
+
+use byteorder::{BigEndian, ReadBytesExt};
+use flate2::read::ZlibDecoder;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
@@ -88,13 +90,16 @@ impl hpk::Visitor for ExtractVisitor {
                     println!("write chunk: {:X} len: {}", chunk.offset, chunk.length);
                 }
                 r.seek(SeekFrom::Start(chunk.offset)).unwrap();
-                {
+
+                // quick check of the zlib header
+                let check = r.read_u16::<BigEndian>().unwrap();
+                let is_zlib = check % 31 == 0;
+
+                if is_zlib {
+                    r.seek(SeekFrom::Start(chunk.offset)).unwrap();
                     let take = r.take(chunk.length);
-                    if let Ok(mut dec) = zlib::Decoder::new(take) {
-                        if self.verbose {
-                            println!("{:?}", dec.header());
-                        }
-                        io::copy(&mut dec, &mut w).unwrap();
+                    let mut dec = ZlibDecoder::new(take);
+                    if io::copy(&mut dec, &mut w).is_ok() {
                         continue;
                     }
                 }
