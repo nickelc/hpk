@@ -246,7 +246,7 @@ fn read_identifier(r: &mut Read) -> [u8; 4]  {
 }
 
 #[allow(unused_variables)]
-pub trait Visitor {
+pub trait ReadVisitor {
     fn visit_header(&mut self, header: &Header) {}
     fn visit_fragments(&mut self, fragments: &Vec<Fragment>) {}
     fn visit_file_entry(&mut self, file_entry: &FileEntry) {}
@@ -254,7 +254,7 @@ pub trait Visitor {
     fn visit_file(&mut self, file: &Path, fragment: &Fragment, r: &mut File) {}
 }
 
-pub fn read_hpk(file: &mut File, visitor: &mut Visitor) {
+pub fn read_hpk(file: &mut File, visitor: &mut ReadVisitor) {
     if let Ok(hdr) = Header::from_read(file) {
         visitor.visit_header(&hdr);
 
@@ -271,7 +271,7 @@ pub fn read_hpk(file: &mut File, visitor: &mut Visitor) {
         }
         visitor.visit_fragments(&fragments);
 
-        fn read_directory(v: &mut Visitor, fragments: &Vec<Fragment>, fragment_index: usize, wd: PathBuf, r: &mut File) {
+        fn read_directory(v: &mut ReadVisitor, fragments: &Vec<Fragment>, fragment_index: usize, wd: PathBuf, r: &mut File) {
             let fragment = fragments.get(fragment_index).unwrap();
             let mut file_entries = Cursor::new(vec![0; fragment.length as usize]);
 

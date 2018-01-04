@@ -64,7 +64,7 @@ struct ExtractVisitor {
     verbose: bool,
 }
 
-impl hpk::Visitor for ExtractVisitor {
+impl hpk::ReadVisitor for ExtractVisitor {
 
     fn visit_directory(&mut self, dir: &Path, fragment: &hpk::Fragment) {
         let path = self.base_path.join(dir);

@@ -35,7 +35,7 @@ pub fn execute(matches: &ArgMatches) {
 struct ListVisitor;
 
 #[allow(unused_variables)]
-impl hpk::Visitor for ListVisitor {
+impl hpk::ReadVisitor for ListVisitor {
 
     fn visit_file(&mut self, file: &Path, fragment: &hpk::Fragment, r: &mut File) {
         println!("{}", file.display());

@@ -35,7 +35,7 @@ pub fn execute(matches: &ArgMatches) {
 
 struct PrintVisitor;
 
-impl hpk::Visitor for PrintVisitor {
+impl hpk::ReadVisitor for PrintVisitor {
 
     fn visit_header(&mut self, header: &hpk::Header) {
         println!("header:");
