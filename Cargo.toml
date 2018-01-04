@@ -11,3 +11,6 @@ tempdir = "0.3"
 [dependencies.clap]
 default-features = false
 version = "^2"
+
+[profile.release]
+lto=true
