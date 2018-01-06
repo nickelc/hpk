@@ -1,3 +1,4 @@
+use std::cmp;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io;
@@ -104,6 +105,72 @@ impl Fragment {
         w.write_u32::<LittleEndian>(self.length as u32)?;
 
         Ok(())
+    }
+}
+
+struct FragmentState {
+    offset: u64,
+    length: u64,
+    limit: u64,
+}
+
+pub struct FragmentedFile<T> {
+    inner: T,
+    length: u64,
+    current: usize,
+    fragments: Vec<FragmentState>,
+}
+
+#[allow(dead_code)]
+impl<T> FragmentedFile<T> {
+
+    pub fn new(inner: T, fragments: Vec<Fragment>) -> Self {
+        let states: Vec<_> = fragments
+            .iter()
+            .map(|f| {
+                FragmentState {
+                    offset: f.offset,
+                    length: f.length,
+                    limit: f.length,
+                }
+            })
+            .collect();
+
+        let length = fragments.iter().map(|f| f.length).sum();
+
+        Self {
+            inner,
+            length,
+            current: 0,
+            fragments: states,
+        }
+    }
+
+    pub fn len(&self) -> u64 {
+        self.length
+    }
+}
+
+impl<T: Read + Seek> Read for FragmentedFile<T> {
+
+    fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
+        if let Some(f) = self.fragments.get_mut(self.current) {
+            // Nothing has been read yet?
+            if f.length == f.limit {
+                self.inner.seek(SeekFrom::Start(f.offset))?;
+            }
+
+            let max = cmp::min(buf.len() as u64, f.limit) as usize;
+            let n = self.inner.read(&mut buf[..max])?;
+            f.limit -= n as u64;
+
+            // if fragment is consumed then goto next fragment
+            if f.limit == 0 {
+                self.current += 1;
+            }
+            return Ok(n);
+        }
+        Ok(0)
     }
 }
 
@@ -429,3 +496,85 @@ pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::io::Cursor;
+    use std::ptr;
+
+    macro_rules! create_buffer {
+        ($size:expr, $init:expr, $ranges: expr, $vals: expr) => (
+            {
+                let mut buf: Vec<u8> = vec![$init; $size];
+
+                let mut zip = $ranges.iter().zip($vals.iter());
+                while let Some((r, val)) = zip.next() {
+                    let slice = &mut buf[r.clone()];
+                    unsafe {
+                        ptr::write_bytes(slice.as_mut_ptr(), *val, slice.len());
+                    }
+                }
+
+                buf
+            }
+        )
+    }
+
+    macro_rules! create_fragments {
+        ($($x:expr),*) => (
+            vec![$($x),*].iter()
+                .map(|x| Fragment::new(x.0, x.1))
+                .collect::<Vec<_>>()
+        );
+        ($($x:expr,)*) => (create_fragments![$($x),*])
+    }
+
+    fn create_fragmented_file() -> FragmentedFile<Cursor<Vec<u8>>> {
+        let fragments = create_fragments!((10, 12), (32, 20), (60, 35), (100, 22));
+
+        let ranges = vec![10..22, 32..52, 60..95, 100..122];
+        let vals: Vec<u8> = vec![0x11, 0x22, 0x33, 0x44];
+
+        let r = Cursor::new(create_buffer!(128, 0xFF, ranges, vals));
+
+        FragmentedFile::new(r, fragments)
+    }
+
+    #[test]
+    fn test_fragmented_file_read() {
+        let mut ff = create_fragmented_file();
+
+        assert_eq!(ff.len(), 89);
+
+        let mut buf = vec![0; ff.len() as usize];
+
+        let n = ff.read(&mut buf).unwrap();
+        assert_eq!(n, 12);
+        let n = ff.read(&mut buf).unwrap();
+        assert_eq!(n, 20);
+        let n = ff.read(&mut buf).unwrap();
+        assert_eq!(n, 35);
+        let n = ff.read(&mut buf).unwrap();
+        assert_eq!(n, 22);
+
+        // EOF of fragmented file reached
+        let n = ff.read(&mut buf).unwrap();
+        assert_eq!(n, 0);
+    }
+
+    #[test]
+    fn test_fragmented_file_read_exact() {
+        let mut ff = create_fragmented_file();
+
+        assert_eq!(ff.len(), 89);
+
+        let mut buf = vec![0; ff.len() as usize];
+
+        ff.read_exact(&mut buf).unwrap();
+
+        // EOF of fragmented file reached
+        let n = ff.read(&mut buf).unwrap();
+        assert_eq!(n, 0);
+    }
+}
