@@ -13,15 +13,14 @@ use flate2::write::ZlibEncoder;
 static HEADER_IDENTIFIER: [u8; 4] = ['B' as u8, 'P' as u8, 'U' as u8, 'L' as u8];
 pub static HEADER_LENGTH: u8 = 36;
 
-#[allow(dead_code)]
 pub struct Header {
-    identifier: [u8; 4],
+    _identifier: [u8; 4],
     pub data_offset: u32,
-    pub fragments_per_file: i32,
-    unknown2: i32,
+    pub fragments_per_file: u32,
+    _unknown2: u32,
     pub fragments_residual_offset: u64,
     pub fragments_residual_count: u64,
-    unknown5: i32,
+    _unknown5: u32,
     pub fragmented_filesystem_offset: u64,
     pub fragmented_filesystem_count: u64,
 }
@@ -30,31 +29,31 @@ impl Header {
 
     fn new(fragment_filesystem_offset: u64, fragment_filesystem_count: u64) -> Header {
         Header {
-            identifier: HEADER_IDENTIFIER,
+            _identifier: HEADER_IDENTIFIER,
             data_offset: 36,
             fragments_per_file: 1,
-            unknown2: -1,
+            _unknown2: 0xFF,
             fragments_residual_offset: 0,
             fragments_residual_count: 0,
-            unknown5: 1,
+            _unknown5: 1,
             fragmented_filesystem_offset: fragment_filesystem_offset,
             fragmented_filesystem_count: fragment_filesystem_count,
         }
     }
 
     pub fn from_read(r: &mut Read) -> Result<Header, ()> {
-        let identifier = read_identifier(r);
-        if identifier.eq(&HEADER_IDENTIFIER) {
+        let _identifier = read_identifier(r);
+        if _identifier.eq(&HEADER_IDENTIFIER) {
             Ok(Header {
-                identifier,
+                _identifier,
                 data_offset: r.read_u32::<LittleEndian>().unwrap(),
-                fragments_per_file: r.read_i32::<LittleEndian>().unwrap(),
-                unknown2: r.read_i32::<LittleEndian>().unwrap(),
+                fragments_per_file: r.read_u32::<LittleEndian>().unwrap(),
+                _unknown2: r.read_u32::<LittleEndian>().unwrap(),
                 fragments_residual_offset: r.read_u32::<LittleEndian>().unwrap() as u64,
-                fragments_residual_count: r.read_i32::<LittleEndian>().unwrap() as u64,
-                unknown5: r.read_i32::<LittleEndian>().unwrap(),
+                fragments_residual_count: r.read_u32::<LittleEndian>().unwrap() as u64,
+                _unknown5: r.read_u32::<LittleEndian>().unwrap(),
                 fragmented_filesystem_offset: r.read_u32::<LittleEndian>().unwrap() as u64,
-                fragmented_filesystem_count: r.read_i32::<LittleEndian>().unwrap() as u64,
+                fragmented_filesystem_count: r.read_u32::<LittleEndian>().unwrap() as u64,
             })
         } else {
             Err(())
@@ -62,22 +61,22 @@ impl Header {
     }
 
     fn write(&self, w: &mut Write) -> io::Result<()> {
-        w.write(&self.identifier)?;
+        w.write(&self._identifier)?;
         w.write_u32::<LittleEndian>(self.data_offset)?;
-        w.write_i32::<LittleEndian>(self.fragments_per_file)?;
-        w.write_i32::<LittleEndian>(self.unknown2).unwrap();
+        w.write_u32::<LittleEndian>(self.fragments_per_file)?;
+        w.write_u32::<LittleEndian>(self._unknown2).unwrap();
         w.write_u32::<LittleEndian>(self.fragments_residual_offset as u32)?;
-        w.write_i32::<LittleEndian>(self.fragments_residual_count as i32)?;
-        w.write_i32::<LittleEndian>(self.unknown5)?;
+        w.write_u32::<LittleEndian>(self.fragments_residual_count as u32)?;
+        w.write_u32::<LittleEndian>(self._unknown5)?;
         w.write_u32::<LittleEndian>(self.fragmented_filesystem_offset as u32)?;
-        w.write_i32::<LittleEndian>(self.fragmented_filesystem_count as i32)?;
+        w.write_u32::<LittleEndian>(self.fragmented_filesystem_count as u32)?;
 
         Ok(())
     }
 
     pub fn filesystem_entries(&self) -> usize {
-        const FRAGMENT_SIZE: i32 = 8;
-        (self.fragmented_filesystem_count as i32 / (FRAGMENT_SIZE * self.fragments_per_file)) as usize
+        const FRAGMENT_SIZE: u32 = 8;
+        (self.fragmented_filesystem_count as u32 / (FRAGMENT_SIZE * self.fragments_per_file)) as usize
     }
 }
 
@@ -92,7 +91,7 @@ impl Fragment {
     pub fn from_read(r: &mut Read) -> Fragment {
         Fragment {
             offset: r.read_u32::<LittleEndian>().unwrap() as u64,
-            length: r.read_i32::<LittleEndian>().unwrap() as u64,
+            length: r.read_u32::<LittleEndian>().unwrap() as u64,
         }
     }
 
@@ -102,7 +101,7 @@ impl Fragment {
 
     fn write(&self, w: &mut Write) -> io::Result<()> {
         w.write_u32::<LittleEndian>(self.offset as u32)?;
-        w.write_i32::<LittleEndian>(self.length as i32)?;
+        w.write_u32::<LittleEndian>(self.length as u32)?;
 
         Ok(())
     }
