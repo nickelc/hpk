@@ -4,6 +4,7 @@ use std::io::SeekFrom;
 use std::fs;
 use std::fs::File;
 use std::path::{Path, PathBuf};
+use std::process;
 
 use byteorder::{BigEndian, ReadBytesExt};
 use flate2::read::ZlibDecoder;
@@ -24,13 +25,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     }
     fn validate_dest(value: String) -> Result<(), String> {
         match fs::read_dir(value) {
-            Ok(dir) => {
-                if dir.count() > 0 {
-                    Err(String::from("Directory is not empty"))
-                } else {
-                    Ok(())
-                }
-            }
+            Ok(_) => Ok(()),
             Err(_) => Err(String::from("Not a valid directory")),
         }
     }
@@ -42,12 +37,21 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
                 .validator(validate_input))
         .arg(Arg::from_usage("<dest> 'destination folder'")
                 .validator(validate_dest))
+        .arg(Arg::from_usage("[force] --force"))
         .arg(Arg::from_usage("[verbose] -v 'verbosely list files processed'"))
 }
 
 pub fn execute(matches: &ArgMatches) {
     let input = value_t!(matches, "file", String).unwrap();
     let dest = value_t!(matches, "dest", String).map(|d| PathBuf::from(d)).unwrap();
+    let force = matches.is_present("force");
+
+    if let Ok(dir) = dest.read_dir() {
+        if !force && dir.count() > 0 {
+            eprintln!("error: Directory is not empty");
+            process::exit(1);
+        }
+    }
 
     let mut f = File::open(input).unwrap();
     let mut visitor = ExtractVisitor {
