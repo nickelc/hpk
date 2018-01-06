@@ -329,9 +329,9 @@ pub fn read_hpk(file: &mut File, visitor: &mut ReadVisitor) {
         let mut fragments_data = Cursor::new(vec![0; hdr.fragmented_filesystem_count as usize]);
 
         file.seek(SeekFrom::Start(hdr.fragmented_filesystem_offset)).unwrap();
-        file.read(fragments_data.get_mut().as_mut_slice()).unwrap();
+        file.read_exact(fragments_data.get_mut().as_mut_slice()).unwrap();
 
-        let entries = hdr.filesystem_entries();
+        let entries = hdr.filesystem_entries() * hdr.fragments_per_file as usize;
         let mut fragments = Vec::with_capacity(entries);
         for _ in 0..entries {
             let fragment = Fragment::from_read(&mut fragments_data).unwrap();
