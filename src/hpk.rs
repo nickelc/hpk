@@ -89,11 +89,10 @@ pub struct Fragment {
 
 impl Fragment {
 
-    pub fn from_read(r: &mut Read) -> Fragment {
-        Fragment {
-            offset: r.read_u32::<LittleEndian>().unwrap() as u64,
-            length: r.read_u32::<LittleEndian>().unwrap() as u64,
-        }
+    pub fn from_read(r: &mut Read) -> io::Result<Fragment> {
+        let offset = u64::from(r.read_u32::<LittleEndian>()?);
+        let length = u64::from(r.read_u32::<LittleEndian>()?);
+        Ok(Fragment { offset, length })
     }
 
     pub fn new(offset: u64, length: u64) -> Fragment {
@@ -332,7 +331,7 @@ pub fn read_hpk(file: &mut File, visitor: &mut ReadVisitor) {
         let entries = hdr.filesystem_entries();
         let mut fragments = Vec::with_capacity(entries);
         for _ in 0..entries {
-            let fragment = Fragment::from_read(&mut fragments_data);
+            let fragment = Fragment::from_read(&mut fragments_data).unwrap();
             fragments.push(fragment);
         }
         visitor.visit_fragments(&fragments);
