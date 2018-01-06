@@ -237,8 +237,7 @@ impl FileEntry {
 }
 
 pub struct CompressionHeader {
-    #[allow(dead_code)]
-    identifier: [u8; 4],
+    _identifier: [u8; 4],
     pub inflated_length: u32,
     pub chunk_size: i32,
     pub chunks: Vec<Chunk>,
@@ -252,38 +251,42 @@ pub struct Chunk {
 
 impl CompressionHeader {
 
-    pub fn from_read<T>(fragment: &Fragment, r: &mut T) -> Result<CompressionHeader, ()>
-        where T: Read + Seek {
-        let identifier = read_identifier(r);
-        if identifier.eq("ZLIB".as_bytes()) {
-            let inflated_length = r.read_u32::<LittleEndian>().unwrap();
-            let chunk_size = r.read_i32::<LittleEndian>().unwrap();
-            let mut offsets = vec![r.read_i32::<LittleEndian>().unwrap() as u64];
-            if offsets[0] != 16 {
-                for _ in 0..((offsets[0] - 16) / 4) {
-                    offsets.push(r.read_i32::<LittleEndian>().unwrap() as u64);
-                }
-            }
-            let mut chunks = vec![Chunk{offset: 0, length: 0}; offsets.len()];
-            let mut len = fragment.length;
-            for (i, offset) in offsets.iter().enumerate().rev() {
-                chunks[i] = Chunk {
-                    offset: fragment.offset + offset,
-                    length: len - offset,
-                };
-                len -= chunks[i].length;
-            }
+    pub fn is_compressed<T: Read + Seek>(r: &mut T) -> bool {
+        let mut buf = [0; 4];
+        r.read_exact(&mut buf).expect("failed to read compression identifier");
+        r.seek(SeekFrom::Current(-4)).expect("failed seek to previous position");
 
-            Ok(CompressionHeader {
-                identifier,
-                inflated_length,
-                chunk_size,
-                chunks: chunks,
-            })
-        } else {
-            r.seek(SeekFrom::Current(-4)).unwrap();
-            Err(())
+        buf.eq("ZLIB".as_bytes())
+    }
+
+    pub fn from_read<T: Read>(fragment: &Fragment, r: &mut T) -> io::Result<CompressionHeader> {
+        let mut _identifier = [0; 4];
+        r.read_exact(&mut _identifier)?;
+
+        let inflated_length = r.read_u32::<LittleEndian>()?;
+        let chunk_size = r.read_i32::<LittleEndian>()?;
+        let mut offsets = vec![r.read_u32::<LittleEndian>()? as u64];
+        if offsets[0] != 16 {
+            for _ in 0..((offsets[0] - 16) / 4) {
+                offsets.push(r.read_u32::<LittleEndian>()? as u64);
+            }
         }
+        let mut chunks = vec![Chunk{offset: 0, length: 0}; offsets.len()];
+        let mut len = fragment.length;
+        for (i, offset) in offsets.iter().enumerate().rev() {
+            chunks[i] = Chunk {
+                offset: fragment.offset + offset,
+                length: len - offset,
+            };
+            len -= chunks[i].length;
+        }
+
+        Ok(CompressionHeader {
+            _identifier,
+            inflated_length,
+            chunk_size,
+            chunks: chunks,
+        })
     }
 
     fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<()> {

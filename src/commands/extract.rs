@@ -84,7 +84,8 @@ impl hpk::ReadVisitor for ExtractVisitor {
         }
         r.seek(SeekFrom::Start(fragment.offset)).unwrap();
 
-        if let Ok(hdr) = hpk::CompressionHeader::from_read(fragment, r) {
+        if hpk::CompressionHeader::is_compressed(r) {
+            let hdr = hpk::CompressionHeader::from_read(fragment, r).expect("failed to read compression header");
             if self.verbose {
                 println!("compressed: inflated_length={} chunk_size={} chunks={}", hdr.inflated_length, hdr.chunk_size, hdr.chunks.len());
             }

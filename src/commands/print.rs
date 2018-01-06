@@ -68,7 +68,8 @@ impl hpk::ReadVisitor for PrintVisitor {
         println!("file: {:?} fragment: 0x{:X} len: {}", file.display(), fragment.offset, fragment.length);
         r.seek(SeekFrom::Start(fragment.offset)).unwrap();
 
-        if let Ok(hdr) = hpk::CompressionHeader::from_read(fragment, r) {
+        if hpk::CompressionHeader::is_compressed(r) {
+            let hdr = hpk::CompressionHeader::from_read(fragment, r).expect("failed to read compression header");
             println!("compressed: inflated_length={} chunk_size={} chunks={}", hdr.inflated_length, hdr.chunk_size, hdr.chunks.len());
             for chunks in &hdr.chunks {
                 println!("chunk: 0x{:<6X} len: {}", chunks.offset, chunks.length);
