@@ -506,46 +506,50 @@ mod tests {
     use std::ptr;
 
     macro_rules! create_buffer {
-        ($size:expr, $init:expr, $ranges: expr, $vals: expr) => (
+        ($size:expr, $init:expr, $data: expr) => (
             {
                 let mut buf: Vec<u8> = vec![$init; $size];
 
-                let mut zip = $ranges.iter().zip($vals.iter());
-                while let Some((r, val)) = zip.next() {
-                    let slice = &mut buf[r.clone()];
+                let mut iter = $data.iter();
+                while let Some(&(start, end, val)) = iter.next() {
+                    let slice = &mut buf[start as usize..(start + end) as usize];
                     unsafe {
-                        ptr::write_bytes(slice.as_mut_ptr(), *val, slice.len());
+                        ptr::write_bytes(slice.as_mut_ptr(), val, slice.len());
                     }
                 }
-
                 buf
+            }
+        );
+    }
+
+    macro_rules! create_fragments {
+        ($x:expr) => (
+            $x.iter().map(|x| Fragment::new(x.0, x.1))
+                .collect::<Vec<_>>()
+        );
+    }
+
+    macro_rules! create_fragmented_file {
+        ($buffer_size:expr, $initial_value:expr, $offsets:expr) => (
+            {
+                let data = create_buffer!($buffer_size, $initial_value, $offsets);
+                let fragments = create_fragments!($offsets);
+
+                let cur = Cursor::new(data);
+                FragmentedFile::new(cur, fragments)
             }
         )
     }
 
-    macro_rules! create_fragments {
-        ($($x:expr),*) => (
-            vec![$($x),*].iter()
-                .map(|x| Fragment::new(x.0, x.1))
-                .collect::<Vec<_>>()
-        );
-        ($($x:expr,)*) => (create_fragments![$($x),*])
-    }
-
-    fn create_fragmented_file() -> FragmentedFile<Cursor<Vec<u8>>> {
-        let fragments = create_fragments!((10, 12), (32, 20), (60, 35), (100, 22));
-
-        let ranges = vec![10..22, 32..52, 60..95, 100..122];
-        let vals: Vec<u8> = vec![0x11, 0x22, 0x33, 0x44];
-
-        let r = Cursor::new(create_buffer!(128, 0xFF, ranges, vals));
-
-        FragmentedFile::new(r, fragments)
-    }
-
     #[test]
     fn test_fragmented_file_read() {
-        let mut ff = create_fragmented_file();
+        let sample = vec![
+            (10, 12, 0x11),
+            (32, 20, 0x22),
+            (60, 35, 0x33),
+            (100, 22, 0x44),
+        ];
+        let mut ff = create_fragmented_file!(128, 0xFF, sample);
 
         assert_eq!(ff.len(), 89);
 
@@ -567,7 +571,13 @@ mod tests {
 
     #[test]
     fn test_fragmented_file_read_exact() {
-        let mut ff = create_fragmented_file();
+        let sample = vec![
+            (10, 12, 0x11),
+            (32, 20, 0x22),
+            (60, 35, 0x33),
+            (100, 22, 0x44),
+        ];
+        let mut ff = create_fragmented_file!(128, 0xFF, sample);
 
         assert_eq!(ff.len(), 89);
 
