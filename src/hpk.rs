@@ -498,6 +498,7 @@ pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
     }
 }
 
+// Tests {{{
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -505,6 +506,7 @@ mod tests {
     use std::io::Cursor;
     use std::ptr;
 
+    // macro: create_buffer {{{
     macro_rules! create_buffer {
         ($size:expr, $init:expr, $data: expr) => (
             {
@@ -521,14 +523,18 @@ mod tests {
             }
         );
     }
+    // }}}
 
+    // macro: create_fragments {{{
     macro_rules! create_fragments {
         ($x:expr) => (
             $x.iter().map(|x| Fragment::new(x.0, x.1))
                 .collect::<Vec<_>>()
         );
     }
+    // }}}
 
+    // macro: create_fragmented_file {{{
     macro_rules! create_fragmented_file {
         ($buffer_size:expr, $initial_value:expr, $offsets:expr) => (
             {
@@ -540,6 +546,7 @@ mod tests {
             }
         )
     }
+    // }}}
 
     #[test]
     fn test_fragmented_file_read() {
@@ -590,3 +597,6 @@ mod tests {
         assert_eq!(n, 0);
     }
 }
+// }}}
+
+// vim: fdm=marker
