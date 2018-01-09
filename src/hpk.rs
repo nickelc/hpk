@@ -662,6 +662,13 @@ mod tests {
         print_buf!("  ", data);
         println!("fragmented data: len={}", buf.len());
         print_buf!("  ", buf);
+
+        // check output buffer
+        assert_eq!(&buf[0..12], [0x11; 12]);
+        assert_eq!(&buf[12..32], [0x22; 20]);
+        assert_eq!(&buf[32..64], [0x33; 32]);
+        assert_eq!(&buf[64..67], [0x33; 3]);
+        assert_eq!(&buf[67..89], [0x44; 22]);
     }
 
     #[test]
@@ -689,6 +696,13 @@ mod tests {
         print_buf!("  ", data);
         println!("fragmented data: len={}", buf.len());
         print_buf!("  ", buf);
+
+        // check output buffer
+        assert_eq!(&buf[0..12], [0x11; 12]);
+        assert_eq!(&buf[12..32], [0x22; 20]);
+        assert_eq!(&buf[32..64], [0x33; 32]);
+        assert_eq!(&buf[64..67], [0x33; 3]);
+        assert_eq!(&buf[67..89], [0x44; 22]);
     }
 }
 // }}}
