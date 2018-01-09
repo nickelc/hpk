@@ -110,13 +110,14 @@ impl Fragment {
 struct FragmentState {
     offset: u64,
     length: u64,
+    end_pos: u64,
     limit: u64,
 }
 
 pub struct FragmentedReader<T> {
     inner: T,
     length: u64,
-    current: usize,
+    pos: u64,
     fragments: Vec<FragmentState>,
 }
 
@@ -130,8 +131,14 @@ impl<T> FragmentedReader<T> {
                 FragmentState {
                     offset: f.offset,
                     length: f.length,
+                    end_pos: 0,
                     limit: f.length,
                 }
+            })
+            .scan(0, |state, mut f| {
+                *state += f.length;
+                f.end_pos = *state;
+                Some(f)
             })
             .collect();
 
@@ -140,7 +147,7 @@ impl<T> FragmentedReader<T> {
         Self {
             inner,
             length,
-            current: 0,
+            pos: 0,
             fragments: states,
         }
     }
@@ -153,20 +160,21 @@ impl<T> FragmentedReader<T> {
 impl<T: Read + Seek> Read for FragmentedReader<T> {
 
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if let Some(f) = self.fragments.get_mut(self.current) {
-            // Nothing has been read yet?
-            if f.length == f.limit {
+        let current = self.fragments
+            .iter()
+            .rposition(|f| f.end_pos <= self.pos)
+            .map_or(0, |i| i + 1);
+
+        if let Some(f) = self.fragments.get_mut(current) {
+            // Nothing has been read yet? seek to fragment start
+            if f.limit == f.length {
                 self.inner.seek(SeekFrom::Start(f.offset))?;
             }
 
             let max = cmp::min(buf.len() as u64, f.limit) as usize;
             let n = self.inner.read(&mut buf[..max])?;
+            self.pos += n as u64;
             f.limit -= n as u64;
-
-            // if fragment is consumed then goto next fragment
-            if f.limit == 0 {
-                self.current += 1;
-            }
             return Ok(n);
         }
         Ok(0)
