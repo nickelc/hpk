@@ -113,7 +113,7 @@ struct FragmentState {
     limit: u64,
 }
 
-pub struct FragmentedFile<T> {
+pub struct FragmentedReader<T> {
     inner: T,
     length: u64,
     current: usize,
@@ -121,7 +121,7 @@ pub struct FragmentedFile<T> {
 }
 
 #[allow(dead_code)]
-impl<T> FragmentedFile<T> {
+impl<T> FragmentedReader<T> {
 
     pub fn new(inner: T, fragments: Vec<Fragment>) -> Self {
         let states: Vec<_> = fragments
@@ -150,7 +150,7 @@ impl<T> FragmentedFile<T> {
     }
 }
 
-impl<T: Read + Seek> Read for FragmentedFile<T> {
+impl<T: Read + Seek> Read for FragmentedReader<T> {
 
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         if let Some(f) = self.fragments.get_mut(self.current) {
@@ -534,66 +534,66 @@ mod tests {
     }
     // }}}
 
-    // macro: create_fragmented_file {{{
-    macro_rules! create_fragmented_file {
+    // macro: create_fragmented_reader {{{
+    macro_rules! create_fragmented_reader {
         ($buffer_size:expr, $initial_value:expr, $offsets:expr) => (
             {
                 let data = create_buffer!($buffer_size, $initial_value, $offsets);
                 let fragments = create_fragments!($offsets);
 
                 let cur = Cursor::new(data);
-                FragmentedFile::new(cur, fragments)
+                FragmentedReader::new(cur, fragments)
             }
         )
     }
     // }}}
 
     #[test]
-    fn test_fragmented_file_read() {
+    fn test_fragmented_reader_read() {
         let sample = vec![
             (10, 12, 0x11),
             (32, 20, 0x22),
             (60, 35, 0x33),
             (100, 22, 0x44),
         ];
-        let mut ff = create_fragmented_file!(128, 0xFF, sample);
+        let mut r = create_fragmented_reader!(128, 0xFF, sample);
 
-        assert_eq!(ff.len(), 89);
+        assert_eq!(r.len(), 89);
 
-        let mut buf = vec![0; ff.len() as usize];
+        let mut buf = vec![0; r.len() as usize];
 
-        let n = ff.read(&mut buf).unwrap();
+        let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 12);
-        let n = ff.read(&mut buf).unwrap();
+        let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 20);
-        let n = ff.read(&mut buf).unwrap();
+        let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 35);
-        let n = ff.read(&mut buf).unwrap();
+        let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 22);
 
         // EOF of fragmented file reached
-        let n = ff.read(&mut buf).unwrap();
+        let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 0);
     }
 
     #[test]
-    fn test_fragmented_file_read_exact() {
+    fn test_fragmented_reader_read_exact() {
         let sample = vec![
             (10, 12, 0x11),
             (32, 20, 0x22),
             (60, 35, 0x33),
             (100, 22, 0x44),
         ];
-        let mut ff = create_fragmented_file!(128, 0xFF, sample);
+        let mut r = create_fragmented_reader!(128, 0xFF, sample);
 
-        assert_eq!(ff.len(), 89);
+        assert_eq!(r.len(), 89);
 
-        let mut buf = vec![0; ff.len() as usize];
+        let mut buf = vec![0; r.len() as usize];
 
-        ff.read_exact(&mut buf).unwrap();
+        r.read_exact(&mut buf).unwrap();
 
         // EOF of fragmented file reached
-        let n = ff.read(&mut buf).unwrap();
+        let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 0);
     }
 }
