@@ -121,8 +121,7 @@ pub struct FragmentedReader<T> {
     fragments: Vec<FragmentState>,
 }
 
-#[allow(dead_code)]
-impl<T> FragmentedReader<T> {
+impl<T: Read + Seek> FragmentedReader<T> {
 
     pub fn new(inner: T, fragments: Vec<Fragment>) -> Self {
         let states: Vec<_> = fragments
@@ -150,6 +149,26 @@ impl<T> FragmentedReader<T> {
             pos: 0,
             fragments: states,
         }
+    }
+
+    fn set_position(&mut self, pos: u64) -> io::Result<()> {
+        if self.pos == pos {
+            return Ok(());
+        }
+
+        let mut limit = pos;
+        for f in &mut self.fragments {
+            let n = cmp::min(f.length, limit);
+            f.limit = f.length - n;
+            limit -= n;
+
+            // read will seek when limit == length
+            if f.limit > 0 && f.limit != f.length {
+                self.inner.seek(SeekFrom::Start(f.offset + n))?;
+            }
+        }
+        self.pos = pos;
+        Ok(())
     }
 
     pub fn len(&self) -> u64 {
@@ -182,6 +201,36 @@ impl<T: Read + Seek> Read for FragmentedReader<T> {
             return Ok(n);
         }
         Ok(0)
+    }
+}
+
+impl<T: Read + Seek> Seek for FragmentedReader<T> {
+
+    fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
+        let (base_pos, offset) = match style {
+            SeekFrom::Start(n) => {
+                self.set_position(n)?;
+                return Ok(n);
+            }
+            SeekFrom::End(n) => (self.length, n),
+            SeekFrom::Current(n) => (self.pos, n),
+        };
+
+        let new_pos = if offset >= 0 {
+            base_pos.checked_add(offset as u64)
+        } else {
+            base_pos.checked_sub((offset.wrapping_neg()) as u64)
+        };
+        match new_pos {
+            Some(n) => {
+                self.set_position(n)?;
+                Ok(n)
+            }
+            None => Err(io::Error::new(
+                io::ErrorKind::InvalidInput,
+                "invalid seek to a negative or overflowing position",
+            )),
+        }
     }
 }
 
