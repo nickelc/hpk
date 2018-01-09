@@ -155,6 +155,10 @@ impl<T> FragmentedReader<T> {
     pub fn len(&self) -> u64 {
         self.length
     }
+
+    pub fn into_inner(self) -> T {
+        self.inner
+    }
 }
 
 impl<T: Read + Seek> Read for FragmentedReader<T> {
@@ -556,6 +560,24 @@ mod tests {
     }
     // }}}
 
+    // macro: print_buf {{{
+    macro_rules! print_buf {
+        ($indent:expr, $buf:expr) => (
+            for row in $buf.chunks(16) {
+                print!($indent);
+                for col in row.chunks(2) {
+                    match col.len() {
+                        2 => print!("{:02X}{:02X} ", col[0], col[1]),
+                        1 => print!("{:02X}", col[0]),
+                        _ => unreachable!(),
+                    };
+                }
+                println!();
+            }
+        )
+    }
+    // }}}
+
     #[test]
     fn test_fragmented_reader_read() {
         let sample = vec![
@@ -572,16 +594,25 @@ mod tests {
 
         let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 12);
-        let n = r.read(&mut buf).unwrap();
+        let mut start = n;
+        let n = r.read(&mut buf[start..]).unwrap();
         assert_eq!(n, 20);
-        let n = r.read(&mut buf).unwrap();
+        start += n;
+        let n = r.read(&mut buf[start..]).unwrap();
         assert_eq!(n, 35);
-        let n = r.read(&mut buf).unwrap();
+        start += n;
+        let n = r.read(&mut buf[start..]).unwrap();
         assert_eq!(n, 22);
 
         // EOF of fragmented file reached
         let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 0);
+
+        let data = r.into_inner().into_inner();
+        println!("Original data: len={}", data.len());
+        print_buf!("  ", data);
+        println!("fragmented data: len={}", buf.len());
+        print_buf!("  ", buf);
     }
 
     #[test]
@@ -603,6 +634,12 @@ mod tests {
         // EOF of fragmented file reached
         let n = r.read(&mut buf).unwrap();
         assert_eq!(n, 0);
+
+        let data = r.into_inner().into_inner();
+        println!("Original data: len={}", data.len());
+        print_buf!("  ", data);
+        println!("fragmented data: len={}", buf.len());
+        print_buf!("  ", buf);
     }
 }
 // }}}
