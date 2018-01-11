@@ -6,11 +6,17 @@ use std::io::Cursor;
 use std::io::SeekFrom;
 use std::str;
 use std::path::{Path, PathBuf};
+use std::ffi::OsStr;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 use flate2::Compression;
 use flate2::write::ZlibEncoder;
 
+mod walk;
+
+pub use self::walk::walk;
+
+const HPK_SIG: [u8; 4] = *b"BPUL";
 static HEADER_IDENTIFIER: [u8; 4] = ['B' as u8, 'P' as u8, 'U' as u8, 'L' as u8];
 pub static HEADER_LENGTH: u8 = 36;
 
@@ -40,6 +46,25 @@ impl Header {
             fragmented_filesystem_offset: fragment_filesystem_offset,
             fragmented_filesystem_count: fragment_filesystem_count,
         }
+    }
+
+    pub fn read_from<T: Read>(mut r: T) -> io::Result<Self> {
+        let mut sig = [0; 4];
+        r.read_exact(&mut sig)?;
+        if !sig.eq(&HPK_SIG) {
+            return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid hpk header"));
+        }
+        Ok(Header {
+            _identifier: sig,
+            data_offset: r.read_u32::<LittleEndian>()?,
+            fragments_per_file: r.read_u32::<LittleEndian>()?,
+            _unknown2: r.read_u32::<LittleEndian>()?,
+            fragments_residual_offset: r.read_u32::<LittleEndian>()? as u64,
+            fragments_residual_count: r.read_u32::<LittleEndian>()? as u64,
+            _unknown5: r.read_u32::<LittleEndian>()?,
+            fragmented_filesystem_offset: r.read_u32::<LittleEndian>()? as u64,
+            fragmented_filesystem_count: r.read_u32::<LittleEndian>()? as u64,
+        })
     }
 
     pub fn from_read(r: &mut Read) -> Result<Header, ()> {
@@ -88,6 +113,20 @@ pub struct Fragment {
 }
 
 impl Fragment {
+
+    pub fn read_from<T: Read>(mut r: T) -> io::Result<Fragment> {
+        let offset = u64::from(r.read_u32::<LittleEndian>()?);
+        let length = u64::from(r.read_u32::<LittleEndian>()?);
+        Ok(Fragment { offset, length })
+    }
+
+    pub fn read_nth_from<T: Read>(n: usize, mut r: T) -> io::Result<Vec<Fragment>> {
+        let mut fragments = Vec::with_capacity(n);
+        for _ in 0..n {
+            fragments.push(Fragment::read_from(&mut r)?);
+        }
+        Ok(fragments)
+    }
 
     pub fn from_read(r: &mut Read) -> io::Result<Fragment> {
         let offset = u64::from(r.read_u32::<LittleEndian>()?);
@@ -231,6 +270,87 @@ impl<T: Read + Seek> Seek for FragmentedReader<T> {
                 "invalid seek to a negative or overflowing position",
             )),
         }
+    }
+}
+
+enum FileType {
+    Dir(usize),
+    File(usize),
+}
+
+pub struct DirEntry {
+    path: PathBuf,
+    ft: FileType,
+    depth: usize,
+}
+
+impl DirEntry {
+
+    pub fn path(&self) -> &Path {
+        &self.path
+    }
+
+    pub fn file_name(&self) -> &OsStr {
+        self.path.file_name().unwrap_or_else(
+            || self.path.as_os_str(),
+        )
+    }
+
+    pub fn index(&self) -> usize {
+        match self.ft {
+            FileType::Dir(idx) => idx,
+            FileType::File(idx) => idx,
+        }
+    }
+
+    pub fn depth(&self) -> usize {
+        self.depth
+    }
+
+    pub fn is_dir(&self) -> bool {
+        if let FileType::Dir(_) = self.ft {
+            true
+        } else {
+            false
+        }
+    }
+
+    fn new_root() -> Self {
+        DirEntry {
+            path: PathBuf::new(),
+            ft: FileType::Dir(0),
+            depth: 0,
+        }
+    }
+
+    fn read_from<T: Read>(parent: &Path, depth: usize, mut r: T) -> io::Result<DirEntry> {
+        let fragment_index = r.read_u32::<LittleEndian>()?.checked_sub(1).ok_or_else(
+            || {
+                io::Error::new(
+                    io::ErrorKind::InvalidData,
+                    "invalid data for fragment index",
+                )
+            },
+        )?;
+
+        let ft = r.read_u32::<LittleEndian>().map(|t| if t == 0 {
+            FileType::File(fragment_index as usize)
+        } else {
+            FileType::Dir(fragment_index as usize)
+        })?;
+
+        let name_length = r.read_u16::<LittleEndian>()?;
+        let mut buf = vec![0; name_length as usize];
+        r.read_exact(&mut buf)?;
+        let name = str::from_utf8(&buf).map_err(|_| {
+            io::Error::new(io::ErrorKind::InvalidData, "invalid name for entry")
+        })?;
+
+        Ok(DirEntry {
+            path: parent.join(name),
+            ft,
+            depth,
+        })
     }
 }
 
