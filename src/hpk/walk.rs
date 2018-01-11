@@ -92,6 +92,18 @@ impl HpkIter {
         &self.header
     }
 
+    pub fn read_file<F>(&self, entry: &hpk::DirEntry, op: F)
+    where
+        F: FnOnce(hpk::FragmentedReader<&File>) -> (),
+    {
+        if !entry.is_dir() {
+            let fragments = &self.fragments[entry.index()];
+            let fragments: Vec<_> = fragments.iter().cloned().collect();
+            let r = hpk::FragmentedReader::new(&self.f, fragments);
+            op(r);
+        }
+    }
+
     fn handle_entry(&mut self, dent: hpk::DirEntry) -> Option<io::Result<hpk::DirEntry>> {
         if dent.is_dir() {
             itry!(self.push(&dent));

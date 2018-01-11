@@ -1,15 +1,12 @@
-use std::fs::File;
-use std::path::Path;
+use std::fs;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use hpk;
 
-
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     fn validate_input(value: String) -> Result<(), String> {
-        let path = Path::new(&value);
-        match path.metadata() {
+        match fs::metadata(value) {
             Ok(ref md) if md.is_file() => Ok(()),
             Ok(_) => Err(String::from("Not a valid file")),
             Err(_) => Err(String::from("Not a valid file")),
@@ -25,19 +22,13 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
 
 pub fn execute(matches: &ArgMatches) {
     let input = value_t!(matches, "file", String).unwrap();
-    let mut f = File::open(input).unwrap();
+    let walk = hpk::walk(input).unwrap();
 
-    let mut visitor = ListVisitor{};
-    hpk::read_hpk(&mut f, &mut visitor);
-}
-
-
-struct ListVisitor;
-
-#[allow(unused_variables)]
-impl hpk::ReadVisitor for ListVisitor {
-
-    fn visit_file(&mut self, file: &Path, fragment: &hpk::Fragment, r: &mut File) {
-        println!("{}", file.display());
+    for dent in walk {
+        if let Ok(dent) = dent {
+            if !dent.is_dir() {
+                println!("{}", dent.path().display());
+            }
+        }
     }
 }

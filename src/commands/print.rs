@@ -1,6 +1,3 @@
-use std::io::prelude::*;
-use std::io::SeekFrom;
-use std::fs::File;
 use std::path::Path;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -26,56 +23,51 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
 
 pub fn execute(matches: &ArgMatches) {
     let input = value_t!(matches, "file", String).unwrap();
-    println!("reading file: {}", input);
-    let mut f = File::open(input).unwrap();
+    let mut walk = hpk::walk(input).unwrap();
 
-    let mut visitor = PrintVisitor{};
-    hpk::read_hpk(&mut f, &mut visitor);
-}
-
-struct PrintVisitor;
-
-impl hpk::ReadVisitor for PrintVisitor {
-
-    fn visit_header(&mut self, header: &hpk::Header) {
-        println!("header:");
-        println!("  data_offset: 0x{:X}", header.data_offset);
-        println!("  fragments_per_file: {}", header.fragments_per_file);
-        println!("  fragments_residual_offset: 0x{:X}", header.fragments_residual_offset);
-        println!("  fragments_residual_count: {}", header.fragments_residual_count);
-        println!("  fragments_filesystem_offset: 0x{:X}", header.fragmented_filesystem_offset);
-        println!("  fragments_filesystem_count: {}", header.fragmented_filesystem_count);
-        println!("  entries: {}", header.filesystem_entries());
-    }
-
-    fn visit_fragments(&mut self, fragments: &Vec<hpk::Fragment>) {
-        println!("fragments:");
-        for fragment in fragments {
-            println!("  0x{:<6X} len: {}", fragment.offset, fragment.length);
+    println!("reading file: {}", walk.path().display());
+    println!("header:");
+    println!("  data_offset: 0x{:X}", walk.header().data_offset);
+    println!("  fragments_residual_offset: 0x{:X}", walk.header().fragments_residual_offset);
+    println!("  fragments_residual_count: {}", walk.header().fragments_residual_count);
+    println!("  fragments_per_file: {}", walk.header().fragments_per_file);
+    println!("  fragments_filesystem_offset: 0x{:X}", walk.header().fragmented_filesystem_offset);
+    println!("  fragments_filesystem_count: {}", walk.header().fragmented_filesystem_count);
+    println!("  fragments_filesystem_entries: {}", walk.header().filesystem_entries());
+    println!("fragments:");
+    for chunk in &walk.fragments {
+        let mut start = Some(true);
+        for fragment in chunk {
+            print!("{}", if start.take().is_some() { "- " } else { "  " });
+            println!("0x{:<6X} len: {}", fragment.offset, fragment.length);
         }
     }
-
-    fn visit_file_entry(&mut self, file_entry: &hpk::FileEntry) {
-        println!("file entry: index={} type={} name={:?}",
-            file_entry.fragment_index, file_entry.fragment_type, file_entry.name);
-    }
-
-    fn visit_directory(&mut self, dir: &Path, fragment: &hpk::Fragment) {
-        println!("dir: {:?} fragment: 0x{:X} len: {}", dir.display(), fragment.offset, fragment.length);
-    }
-
-    fn visit_file(&mut self, file: &Path, fragment: &hpk::Fragment, r: &mut File) {
-        println!("file: {:?} fragment: 0x{:X} len: {}", file.display(), fragment.offset, fragment.length);
-        r.seek(SeekFrom::Start(fragment.offset)).unwrap();
-
-        if hpk::CompressionHeader::is_compressed(r) {
-            let hdr = hpk::CompressionHeader::from_read(fragment, r).expect("failed to read compression header");
-            println!("compressed: inflated_length={} chunk_size={} chunks={}", hdr.inflated_length, hdr.chunk_size, hdr.chunks.len());
-            for chunks in &hdr.chunks {
-                println!("chunk: 0x{:<6X} len: {}", chunks.offset, chunks.length);
+    while let Some(Ok(dent)) = walk.next() {
+        println!("{} index={} depth={} {:?}",
+            if dent.is_dir() { "dir: " } else { "file:" },
+            dent.index(),
+            dent.depth(),
+            dent.path().display(),
+        );
+        walk.read_file(&dent, |mut r| {
+            if hpk::CompressionHeader::is_compressed(&mut r) {
+                let hdr = hpk::CompressionHeader::read_from(r.len(), &mut r).unwrap();
+                println!(" compressed: inflated_length={} chunk_size={} chunks={}",
+                    hdr.inflated_length,
+                    hdr.chunk_size,
+                    hdr.chunks.len()
+                );
+                let mut first = Some(true);
+                for chunk in &hdr.chunks {
+                    if let Some(_) = first.take() {
+                        println!("  chunks: 0x{:<6X} len: {}", chunk.offset, chunk.length);
+                    } else {
+                        println!("          0x{:<6X} len: {}", chunk.offset, chunk.length);
+                    }
+                }
+            } else {
+                println!("compressed: no");
             }
-        } else {
-            println!("compressed: no");
-        }
+        });
     }
 }

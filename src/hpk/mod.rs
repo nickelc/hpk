@@ -106,7 +106,7 @@ impl Header {
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Debug)]
 pub struct Fragment {
     pub offset: u64,
     pub length: u64,
@@ -438,6 +438,42 @@ impl CompressionHeader {
         r.seek(SeekFrom::Current(-4)).expect("failed seek to previous position");
 
         buf.eq("ZLIB".as_bytes())
+    }
+
+    pub fn read_from<T: Read>(length: u64, r: &mut T) -> io::Result<CompressionHeader> {
+        let mut _identifier = [0; 4];
+        r.read_exact(&mut _identifier)?;
+
+        let inflated_length = r.read_u32::<LittleEndian>()?;
+        let chunk_size = r.read_i32::<LittleEndian>()?;
+        let mut offsets = vec![r.read_u32::<LittleEndian>()? as u64];
+        if offsets[0] != 16 {
+            for _ in 0..((offsets[0] - 16) / 4) {
+                offsets.push(r.read_u32::<LittleEndian>()? as u64);
+            }
+        }
+        let mut chunks = vec![
+            Chunk {
+                offset: 0,
+                length: 0,
+            };
+            offsets.len()
+        ];
+        let mut len = length;
+        for (i, offset) in offsets.iter().enumerate().rev() {
+            chunks[i] = Chunk {
+                offset: *offset,
+                length: len - offset,
+            };
+            len -= chunks[i].length;
+        }
+
+        Ok(CompressionHeader {
+            _identifier,
+            inflated_length,
+            chunk_size,
+            chunks: chunks,
+        })
     }
 
     pub fn from_read<T: Read>(fragment: &Fragment, r: &mut T) -> io::Result<CompressionHeader> {
