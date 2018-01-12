@@ -8,8 +8,9 @@ use std::str;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{LittleEndian, BigEndian, ReadBytesExt, WriteBytesExt};
 use flate2::Compression;
+use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 
 mod walk;
@@ -67,25 +68,6 @@ impl Header {
         })
     }
 
-    pub fn from_read(r: &mut Read) -> Result<Header, ()> {
-        let _identifier = read_identifier(r);
-        if _identifier.eq(&HEADER_IDENTIFIER) {
-            Ok(Header {
-                _identifier,
-                data_offset: r.read_u32::<LittleEndian>().unwrap(),
-                fragments_per_file: r.read_u32::<LittleEndian>().unwrap(),
-                _unknown2: r.read_u32::<LittleEndian>().unwrap(),
-                fragments_residual_offset: r.read_u32::<LittleEndian>().unwrap() as u64,
-                fragments_residual_count: r.read_u32::<LittleEndian>().unwrap() as u64,
-                _unknown5: r.read_u32::<LittleEndian>().unwrap(),
-                fragmented_filesystem_offset: r.read_u32::<LittleEndian>().unwrap() as u64,
-                fragmented_filesystem_count: r.read_u32::<LittleEndian>().unwrap() as u64,
-            })
-        } else {
-            Err(())
-        }
-    }
-
     fn write(&self, w: &mut Write) -> io::Result<()> {
         w.write(&self._identifier)?;
         w.write_u32::<LittleEndian>(self.data_offset)?;
@@ -126,12 +108,6 @@ impl Fragment {
             fragments.push(Fragment::read_from(&mut r)?);
         }
         Ok(fragments)
-    }
-
-    pub fn from_read(r: &mut Read) -> io::Result<Fragment> {
-        let offset = u64::from(r.read_u32::<LittleEndian>()?);
-        let length = u64::from(r.read_u32::<LittleEndian>()?);
-        Ok(Fragment { offset, length })
     }
 
     pub fn new(offset: u64, length: u64) -> Fragment {
@@ -379,17 +355,6 @@ impl FileEntry {
         }
     }
 
-    pub fn from_read(r: &mut Read) -> io::Result<FileEntry> {
-        let fragment_index = r.read_i32::<LittleEndian>()?;
-        let fragment_type = r.read_u32::<LittleEndian>()?;
-        let name_length = r.read_u16::<LittleEndian>()?;
-        let mut buf = vec![0; name_length as usize];
-        r.read_exact(&mut buf).unwrap();
-        let name = str::from_utf8(&buf).unwrap().to_owned();
-
-        Ok(FileEntry { fragment_index, fragment_type, name })
-    }
-
     fn write(&self, w: &mut Write) -> io::Result<()> {
         w.write_i32::<LittleEndian>(self.fragment_index)?;
         w.write_u32::<LittleEndian>(self.fragment_type)?;
@@ -397,23 +362,6 @@ impl FileEntry {
         w.write(self.name.as_bytes())?;
 
         Ok(())
-    }
-
-    pub fn get_index(&self) -> usize {
-        (self.fragment_index - 1) as usize
-    }
-
-    pub fn get_size(&self) -> u64 {
-        10 + self.name.len() as u64
-    }
-
-    pub fn is_dir(&self) -> bool {
-        self.fragment_type == 1
-    }
-
-    #[allow(dead_code)]
-    pub fn is_file(&self) -> bool {
-        self.fragment_type == 0
     }
 }
 
@@ -476,36 +424,6 @@ impl CompressionHeader {
         })
     }
 
-    pub fn from_read<T: Read>(fragment: &Fragment, r: &mut T) -> io::Result<CompressionHeader> {
-        let mut _identifier = [0; 4];
-        r.read_exact(&mut _identifier)?;
-
-        let inflated_length = r.read_u32::<LittleEndian>()?;
-        let chunk_size = r.read_i32::<LittleEndian>()?;
-        let mut offsets = vec![r.read_u32::<LittleEndian>()? as u64];
-        if offsets[0] != 16 {
-            for _ in 0..((offsets[0] - 16) / 4) {
-                offsets.push(r.read_u32::<LittleEndian>()? as u64);
-            }
-        }
-        let mut chunks = vec![Chunk{offset: 0, length: 0}; offsets.len()];
-        let mut len = fragment.length;
-        for (i, offset) in offsets.iter().enumerate().rev() {
-            chunks[i] = Chunk {
-                offset: fragment.offset + offset,
-                length: len - offset,
-            };
-            len -= chunks[i].length;
-        }
-
-        Ok(CompressionHeader {
-            _identifier,
-            inflated_length,
-            chunk_size,
-            chunks: chunks,
-        })
-    }
-
     fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<()> {
         const CHUNK_SIZE: i32 = 32768;
         const HDR_SIZE: i32 = 12;
@@ -524,66 +442,39 @@ impl CompressionHeader {
     }
 }
 
-fn read_identifier(r: &mut Read) -> [u8; 4]  {
-    let mut buf = [0; 4];
-    r.read_exact(&mut buf).unwrap();
-    buf
-}
+pub fn copy<W>(mut r: FragmentedReader<&File>, mut w: &mut W) -> io::Result<u64>
+where W: Write
+{
+    if CompressionHeader::is_compressed(&mut r) {
+        let mut written = 0;
+        let hdr = CompressionHeader::read_from(r.len(), &mut r)?;
+        for chunk in &hdr.chunks {
+            r.seek(SeekFrom::Start(chunk.offset))?;
 
-#[allow(unused_variables)]
-pub trait ReadVisitor {
-    fn visit_header(&mut self, header: &Header) {}
-    fn visit_fragments(&mut self, fragments: &Vec<Fragment>) {}
-    fn visit_file_entry(&mut self, file_entry: &FileEntry) {}
-    fn visit_directory(&mut self, dir: &Path, fragment: &Fragment) {}
-    fn visit_file(&mut self, file: &Path, fragment: &Fragment, r: &mut File) {}
-}
+            // quick check of the zlib header
+            let check = r.read_u16::<BigEndian>()?;
+            let is_zlib = check % 31 == 0;
 
-pub fn read_hpk(file: &mut File, visitor: &mut ReadVisitor) {
-    if let Ok(hdr) = Header::from_read(file) {
-        visitor.visit_header(&hdr);
-
-        let mut fragments_data = Cursor::new(vec![0; hdr.fragmented_filesystem_count as usize]);
-
-        file.seek(SeekFrom::Start(hdr.fragmented_filesystem_offset)).unwrap();
-        file.read_exact(fragments_data.get_mut().as_mut_slice()).unwrap();
-
-        let entries = hdr.filesystem_entries() * hdr.fragments_per_file as usize;
-        let mut fragments = Vec::with_capacity(entries);
-        for _ in 0..entries {
-            let fragment = Fragment::from_read(&mut fragments_data).unwrap();
-            fragments.push(fragment);
-        }
-        visitor.visit_fragments(&fragments);
-
-        fn read_directory(v: &mut ReadVisitor, fragments: &Vec<Fragment>, fragment_index: usize, wd: PathBuf, r: &mut File) {
-            let fragment = fragments.get(fragment_index).unwrap();
-            let mut file_entries = Cursor::new(vec![0; fragment.length as usize]);
-
-            v.visit_directory(wd.as_path(), fragment);
-
-            r.seek(SeekFrom::Start(fragment.offset)).unwrap();
-            r.read_exact(file_entries.get_mut().as_mut_slice()).unwrap();
-
-            let mut pos = 0;
-            while pos < fragment.length {
-                let entry = FileEntry::from_read(&mut file_entries).unwrap();
-                v.visit_file_entry(&entry);
-                pos += entry.get_size();
-
-                let path = wd.join(entry.name.clone());
-
-                if entry.is_dir() {
-                    read_directory(v, fragments, entry.get_index(), path, r);
-                } else {
-                    let file_fragment = fragments.get(entry.get_index()).unwrap();
-
-                    v.visit_file(path.as_path(), file_fragment, r);
+            if is_zlib {
+                r.seek(SeekFrom::Start(chunk.offset))?;
+                let take = r.take(chunk.length);
+                let mut dec = ZlibDecoder::new(take);
+                if let Ok(n) = io::copy(&mut dec, &mut w) {
+                    written += n;
+                    r = dec.into_inner().into_inner();
+                    continue;
                 }
+                r = dec.into_inner().into_inner();
             }
+            // chunk is not compressed
+            r.seek(SeekFrom::Start(chunk.offset))?;
+            let mut take = r.take(chunk.length);
+            written += io::copy(&mut take, &mut w)?;
+            r = take.into_inner();
         }
-
-        read_directory(visitor, &fragments, 0, PathBuf::from(""), file);
+        Ok(written)
+    } else {
+        io::copy(&mut r, &mut w)
     }
 }
 
