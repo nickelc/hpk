@@ -49,8 +49,12 @@ pub fn execute(matches: &ArgMatches) {
             dent.depth(),
             dent.path().display(),
         );
+        let fragment = &walk.fragments[dent.index()][0];
+        println!(" fragment: 0x{:X} len: {}", fragment.offset, fragment.length);
         walk.read_file(&dent, |mut r| {
-            if hpk::CompressionHeader::is_compressed(&mut r) {
+            if r.len() == 0 {
+                println!(" empty file");
+            } else if hpk::CompressionHeader::is_compressed(&mut r) {
                 let hdr = hpk::CompressionHeader::read_from(r.len(), &mut r).unwrap();
                 println!(" compressed: inflated_length={} chunk_size={} chunks={}",
                     hdr.inflated_length,
@@ -66,7 +70,7 @@ pub fn execute(matches: &ArgMatches) {
                     }
                 }
             } else {
-                println!("compressed: no");
+                println!(" compressed: no");
             }
         });
     }
