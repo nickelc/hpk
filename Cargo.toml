@@ -7,6 +7,7 @@ authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 byteorder = "1.1"
 flate2 = "0.2"
 tempdir = "0.3"
+walkdir="2"
 
 [dependencies.clap]
 default-features = false

@@ -1,5 +1,5 @@
+use std::fs;
 use std::fs::File;
-use std::path::{Path, PathBuf};
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
@@ -7,8 +7,7 @@ use hpk;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     fn validate_dir(value: String) -> Result<(), String> {
-        let path = Path::new(&value);
-        if let Ok(md) = path.metadata() {
+        if let Ok(md) = fs::metadata(value) {
             if md.is_dir() {
                 return Ok(());
             }
@@ -29,6 +28,5 @@ pub fn execute(matches: &ArgMatches) {
     let file = value_t!(matches, "file", String).unwrap();
 
     let mut out = File::create(file).unwrap();
-    hpk::write_hpk(PathBuf::from(input), &mut out).unwrap();
+    hpk::create(&input, &mut out).unwrap();
 }
-

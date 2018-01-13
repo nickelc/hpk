@@ -18,8 +18,7 @@ mod walk;
 pub use self::walk::walk;
 
 const HPK_SIG: [u8; 4] = *b"BPUL";
-static HEADER_IDENTIFIER: [u8; 4] = ['B' as u8, 'P' as u8, 'U' as u8, 'L' as u8];
-pub static HEADER_LENGTH: u8 = 36;
+const HEADER_LENGTH: u8 = 36;
 
 pub struct Header {
     _identifier: [u8; 4],
@@ -35,9 +34,9 @@ pub struct Header {
 
 impl Header {
 
-    fn new(fragment_filesystem_offset: u64, fragment_filesystem_count: u64) -> Header {
+    pub fn new(fragment_filesystem_offset: u64, fragment_filesystem_count: u64) -> Header {
         Header {
-            _identifier: HEADER_IDENTIFIER,
+            _identifier: HPK_SIG,
             data_offset: 36,
             fragments_per_file: 1,
             _unknown2: 0xFF,
@@ -68,7 +67,7 @@ impl Header {
         })
     }
 
-    fn write(&self, w: &mut Write) -> io::Result<()> {
+    pub fn write(&self, w: &mut Write) -> io::Result<()> {
         w.write(&self._identifier)?;
         w.write_u32::<LittleEndian>(self.data_offset)?;
         w.write_u32::<LittleEndian>(self.fragments_per_file)?;
@@ -114,7 +113,7 @@ impl Fragment {
         Fragment { offset, length }
     }
 
-    fn write(&self, w: &mut Write) -> io::Result<()> {
+    pub fn write(&self, w: &mut Write) -> io::Result<()> {
         w.write_u32::<LittleEndian>(self.offset as u32)?;
         w.write_u32::<LittleEndian>(self.length as u32)?;
 
@@ -299,6 +298,22 @@ impl DirEntry {
         }
     }
 
+    pub fn new_dir<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
+        DirEntry {
+            path: path.as_ref().to_path_buf(),
+            ft: FileType::Dir(index),
+            depth,
+        }
+    }
+
+    pub fn new_file<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
+        DirEntry {
+            path: path.as_ref().to_path_buf(),
+            ft: FileType::File(index),
+            depth,
+        }
+    }
+
     fn read_from<T: Read>(parent: &Path, depth: usize, mut r: T) -> io::Result<DirEntry> {
         let fragment_index = r.read_u32::<LittleEndian>()?.checked_sub(1).ok_or_else(
             || {
@@ -328,39 +343,17 @@ impl DirEntry {
             depth,
         })
     }
-}
 
-#[derive(Debug)]
-pub struct FileEntry {
-    pub fragment_index: i32,
-    pub fragment_type: u32,
-    pub name: String,
-}
-
-impl FileEntry {
-
-    fn new_dir(fragment_index: i32, name: String) -> FileEntry {
-        FileEntry {
-            fragment_index,
-            fragment_type: 1,
-            name,
-        }
-    }
-
-    fn new_file(fragment_index: i32, name: String) -> FileEntry {
-        FileEntry {
-            fragment_index,
-            fragment_type: 0,
-            name,
-        }
-    }
-
-    fn write(&self, w: &mut Write) -> io::Result<()> {
-        w.write_i32::<LittleEndian>(self.fragment_index)?;
-        w.write_u32::<LittleEndian>(self.fragment_type)?;
-        w.write_u16::<LittleEndian>(self.name.len() as u16)?;
-        w.write(self.name.as_bytes())?;
-
+    pub fn write(&self, w: &mut Write) -> io::Result<()> {
+        let (index, _type) = match self.ft {
+            FileType::Dir(index) => (index, 1),
+            FileType::File(index) => (index, 0),
+        };
+        w.write_u32::<LittleEndian>(index as u32)?;
+        w.write_u32::<LittleEndian>(_type)?;
+        let name = self.path.file_name().unwrap().to_str().unwrap();
+        w.write_u16::<LittleEndian>(name.len() as u16)?;
+        w.write(name.as_bytes())?;
         Ok(())
     }
 }
@@ -424,7 +417,7 @@ impl CompressionHeader {
         })
     }
 
-    fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<()> {
+    pub fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<()> {
         const CHUNK_SIZE: i32 = 32768;
         const HDR_SIZE: i32 = 12;
 
@@ -443,7 +436,8 @@ impl CompressionHeader {
 }
 
 pub fn copy<W>(mut r: FragmentedReader<&File>, mut w: &mut W) -> io::Result<u64>
-where W: Write
+where
+    W: Write,
 {
     if CompressionHeader::is_compressed(&mut r) {
         let mut written = 0;
@@ -478,29 +472,91 @@ where W: Write
     }
 }
 
-pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
-    // skip header
-    out.seek(SeekFrom::Start(HEADER_LENGTH as u64))?;
+pub fn create<P, W>(dir: P, w: &mut W) -> io::Result<()>
+where
+    P: AsRef<Path>,
+    W: Write + Seek,
+{
+    use std::collections::HashMap;
+    use walkdir::WalkDir;
 
-    let mut fragments = vec![];
-    let fragment = walk_dir(path, &mut fragments, out)?;
-    fragments.insert(0, fragment);
+    // macro: strip_prefix {{{
+    macro_rules! strip_prefix {
+        (dir $path: expr) => ({
+            let path = $path.strip_prefix(&dir).unwrap();
+            let parent = path.parent();
+            (path, parent)
+        });
+        (file $path: expr) => ({
+            let (path, parent) = strip_prefix!(dir $path);
+            (path, parent.unwrap())
+        })
+    }
+    // }}}
 
-    let fragment_position = out.seek(SeekFrom::Current(0))?;
+    let walkdir = WalkDir::new(&dir).contents_first(true).sort_by(|a, b| {
+        a.file_name().cmp(b.file_name())
+    });
+    let mut fragments: Vec<Fragment> = vec![];
+    let mut stack = HashMap::new();
 
-    for fragment in fragments {
-        fragment.write(out)?;
+    w.seek(SeekFrom::Start(HEADER_LENGTH as u64))?;
+
+    for entry in walkdir {
+        let entry = entry?;
+
+        if entry.file_type().is_file() {
+            let (path, parent) = strip_prefix!(file entry.path());
+
+            fragments.push(write_file(entry.path(), w)?);
+            let index = fragments.len() + 1;
+            let parent_buf = stack.entry(parent.to_path_buf()).or_insert_with(Vec::new);
+            let dent = DirEntry::new_file(path, index, entry.depth());
+            dent.write(parent_buf)?;
+
+        } else if entry.file_type().is_dir() {
+            let (path, parent) = strip_prefix!(dir entry.path());
+            let dir_buffer = stack.remove(&path.to_path_buf()).unwrap_or_else(Vec::new);
+
+            let position = w.seek(SeekFrom::Current(0))?;
+            let mut r = Cursor::new(dir_buffer);
+            io::copy(&mut r, w)?;
+            let current_pos = w.seek(SeekFrom::Current(0))?;
+
+            let fragment = Fragment::new(position, current_pos - position);
+            if entry.depth() > 0 {
+                fragments.push(fragment);
+                let index = fragments.len() + 1;
+                let dent = DirEntry::new_dir(path, index, entry.depth());
+                let parent_buf = stack
+                    .entry(parent.expect("bug?").to_path_buf())
+                    .or_insert_with(Vec::new);
+                dent.write(parent_buf)?;
+
+            } else {
+                // root dir must be the first fragment
+                fragments.insert(0, fragment);
+            }
+        }
     }
 
-    let current_pos = out.seek(SeekFrom::Current(0))?;
-    out.seek(SeekFrom::Start(0))?;
+    let fragment_pos = w.seek(SeekFrom::Current(0))?;
+    for fragment in fragments {
+        fragment.write(w)?;
+    }
 
-    let header = Header::new(fragment_position, current_pos - fragment_position);
-    header.write(out)?;
+    let current_pos = w.seek(SeekFrom::Current(0))?;
+    w.seek(SeekFrom::Start(0))?;
+    let header = Header::new(fragment_pos, current_pos - fragment_pos);
+    header.write(w)?;
 
     return Ok(());
 
-    fn write_file(file: PathBuf, out: &mut File) -> io::Result<Fragment> {
+    // write_file {{{
+    fn write_file<W>(file: &Path, w: &mut W) -> io::Result<Fragment>
+    where
+        W: Write + Seek,
+    {
         const CHUNK_SIZE: u64 = 32768;
         let extensions = vec!["lst", "lua", "xml", "tga", "dds", "xtex", "bin", "csv"];
 
@@ -530,12 +586,12 @@ pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
                 match encoder.finish() {
                     Ok(ref buf) if buf.len() as u64 == CHUNK_SIZE => {
                         io::copy(&mut chunk, &mut output_buffer)?;
-                    },
+                    }
                     Ok(buf) => {
                         let mut buf = Cursor::new(buf);
                         io::copy(&mut buf, &mut output_buffer)?;
-                    },
-                    Err(_) => {},
+                    }
+                    Err(_) => {}
                 };
 
                 if file.seek(SeekFrom::Current(0))? == length {
@@ -543,67 +599,25 @@ pub fn write_hpk(path: PathBuf, out: &mut File) -> io::Result<()> {
                 }
             }
 
-            let position = out.seek(SeekFrom::Current(0))?;
+            let position = w.seek(SeekFrom::Current(0))?;
 
-            CompressionHeader::write(length as u32, offsets, out)?;
-            io::copy(&mut Cursor::new(output_buffer), out)?;
+            CompressionHeader::write(length as u32, offsets, w)?;
+            io::copy(&mut Cursor::new(output_buffer), w)?;
 
-            let current_pos = out.seek(SeekFrom::Current(0))?;
+            let current_pos = w.seek(SeekFrom::Current(0))?;
 
             Ok(Fragment::new(position, current_pos - position))
 
         } else {
-            let position = out.seek(SeekFrom::Current(0))?;
+            let position = w.seek(SeekFrom::Current(0))?;
             let mut input = File::open(file)?;
-            io::copy(&mut input, out)?;
-            let current_pos = out.seek(SeekFrom::Current(0))?;
+            io::copy(&mut input, w)?;
+            let current_pos = w.seek(SeekFrom::Current(0))?;
 
             Ok(Fragment::new(position, current_pos - position))
         }
     }
-
-    fn walk_dir(dir: PathBuf, fragments: &mut Vec<Fragment>, out: &mut File) -> io::Result<Fragment> {
-        let entries = dir.read_dir()?;
-        let mut paths = entries.map(|e| e.unwrap().path()).collect::<Vec<_>>();
-        paths.sort_by(|a, b| {
-            let a = a.to_str().unwrap().to_owned().to_lowercase();
-            let b = b.to_str().unwrap().to_owned().to_lowercase();
-            a.cmp(&b)
-        });
-
-        let mut dir_buffer = vec![];
-
-        for entry in paths {
-            let entry_name = entry.file_name().unwrap()
-                                    .to_str().unwrap().to_owned();
-            if entry.is_dir() {
-                let fragment = walk_dir(entry, fragments, out)?;
-                fragments.push(fragment);
-                let file_entry = FileEntry::new_dir(
-                    fragments.len() as i32 + 1,
-                    entry_name,
-                );
-                file_entry.write(&mut dir_buffer)?;
-
-            } else {
-                let fragment = write_file(entry, out)?;
-                fragments.push(fragment);
-
-                let file_entry = FileEntry::new_file(
-                    fragments.len() as i32 + 1,
-                    entry_name,
-                );
-                file_entry.write(&mut dir_buffer)?;
-            }
-        }
-
-        let position = out.seek(SeekFrom::Current(0))?;
-        let mut buffer = Cursor::new(dir_buffer);
-        io::copy(&mut buffer, out)?;
-        let current_pos = out.seek(SeekFrom::Current(0))?;
-
-        Ok(Fragment::new(position, current_pos - position))
-    }
+    // }}}
 }
 
 // Tests {{{
