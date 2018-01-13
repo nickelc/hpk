@@ -375,10 +375,14 @@ impl CompressionHeader {
 
     pub fn is_compressed<T: Read + Seek>(r: &mut T) -> bool {
         let mut buf = [0; 4];
-        r.read_exact(&mut buf).expect("failed to read compression identifier");
-        r.seek(SeekFrom::Current(-4)).expect("failed seek to previous position");
+        let pos = r.seek(SeekFrom::Current(0)).expect("failed to get current position");
+        let compressed = match r.read_exact(&mut buf) {
+            Ok(_) => buf.eq(b"ZLIB"),
+            Err(_) => false,
+        };
+        r.seek(SeekFrom::Start(pos)).expect("failed seek to previous position");
 
-        buf.eq("ZLIB".as_bytes())
+        compressed
     }
 
     pub fn read_from<T: Read>(length: u64, r: &mut T) -> io::Result<CompressionHeader> {
