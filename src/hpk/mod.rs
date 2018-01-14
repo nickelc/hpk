@@ -29,12 +29,12 @@ pub struct Header {
     pub fragments_residual_count: u64,
     _unknown5: u32,
     pub fragmented_filesystem_offset: u64,
-    pub fragmented_filesystem_count: u64,
+    pub fragmented_filesystem_length: u64,
 }
 
 impl Header {
 
-    pub fn new(fragment_filesystem_offset: u64, fragment_filesystem_count: u64) -> Header {
+    pub fn new(fragmented_filesystem_offset: u64, fragmented_filesystem_length: u64) -> Header {
         Header {
             _identifier: HPK_SIG,
             data_offset: 36,
@@ -43,8 +43,8 @@ impl Header {
             fragments_residual_offset: 0,
             fragments_residual_count: 0,
             _unknown5: 1,
-            fragmented_filesystem_offset: fragment_filesystem_offset,
-            fragmented_filesystem_count: fragment_filesystem_count,
+            fragmented_filesystem_offset,
+            fragmented_filesystem_length,
         }
     }
 
@@ -63,7 +63,7 @@ impl Header {
             fragments_residual_count: r.read_u32::<LittleEndian>()? as u64,
             _unknown5: r.read_u32::<LittleEndian>()?,
             fragmented_filesystem_offset: r.read_u32::<LittleEndian>()? as u64,
-            fragmented_filesystem_count: r.read_u32::<LittleEndian>()? as u64,
+            fragmented_filesystem_length: r.read_u32::<LittleEndian>()? as u64,
         })
     }
 
@@ -76,14 +76,14 @@ impl Header {
         w.write_u32::<LittleEndian>(self.fragments_residual_count as u32)?;
         w.write_u32::<LittleEndian>(self._unknown5)?;
         w.write_u32::<LittleEndian>(self.fragmented_filesystem_offset as u32)?;
-        w.write_u32::<LittleEndian>(self.fragmented_filesystem_count as u32)?;
+        w.write_u32::<LittleEndian>(self.fragmented_filesystem_length as u32)?;
 
         Ok(())
     }
 
     pub fn filesystem_entries(&self) -> usize {
         const FRAGMENT_SIZE: u32 = 8;
-        (self.fragmented_filesystem_count as u32 / (FRAGMENT_SIZE * self.fragments_per_file)) as usize
+        (self.fragmented_filesystem_length as u32 / (FRAGMENT_SIZE * self.fragments_per_file)) as usize
     }
 }
 

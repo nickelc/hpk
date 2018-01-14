@@ -22,7 +22,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> io::Result<HpkIter> {
     let mut f = File::open(&file)?;
 
     let hdr = hpk::Header::read_from(&mut f)?;
-    let mut fragments_data = Cursor::new(vec![0; hdr.fragmented_filesystem_count as usize]);
+    let mut fragments_data = Cursor::new(vec![0; hdr.fragmented_filesystem_length as usize]);
 
     f.seek(SeekFrom::Start(hdr.fragmented_filesystem_offset))?;
     f.read_exact(fragments_data.get_mut().as_mut_slice())?;

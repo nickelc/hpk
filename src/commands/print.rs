@@ -32,7 +32,7 @@ pub fn execute(matches: &ArgMatches) {
     println!("  fragments_residual_count: {}", walk.header().fragments_residual_count);
     println!("  fragments_per_file: {}", walk.header().fragments_per_file);
     println!("  fragments_filesystem_offset: 0x{:X}", walk.header().fragmented_filesystem_offset);
-    println!("  fragments_filesystem_count: {}", walk.header().fragmented_filesystem_count);
+    println!("  fragments_filesystem_length: {}", walk.header().fragmented_filesystem_length);
     println!("filesystem entries: {}", walk.header().filesystem_entries());
     println!("filesystem fragments:");
     for chunk in &walk.fragments {
