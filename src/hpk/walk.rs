@@ -6,7 +6,7 @@ use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 
-use hpk;
+use super::*;
 
 macro_rules! itry {
     ($e:expr) => {
@@ -21,7 +21,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> io::Result<HpkIter> {
     let file = file.as_ref().to_path_buf();
     let mut f = File::open(&file)?;
 
-    let hdr = hpk::Header::read_from(&mut f)?;
+    let hdr = Header::read_from(&mut f)?;
     let mut fragments_data = Cursor::new(vec![0; hdr.fragmented_filesystem_length as usize]);
 
     f.seek(SeekFrom::Start(hdr.fragmented_filesystem_offset))?;
@@ -29,7 +29,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> io::Result<HpkIter> {
 
     let mut fragments = Vec::with_capacity(hdr.filesystem_entries());
     for _ in 0..hdr.filesystem_entries() {
-        fragments.push(hpk::Fragment::read_nth_from(
+        fragments.push(Fragment::read_nth_from(
             hdr.fragments_per_file as usize,
             &mut fragments_data,
         )?);
@@ -41,13 +41,13 @@ pub fn walk<P: AsRef<Path>>(file: P) -> io::Result<HpkIter> {
     f.read_exact(residual_data.get_mut().as_mut_slice())?;
 
     let residual_count = hdr.fragments_residual_count;
-    let residuals = hpk::Fragment::read_nth_from(residual_count as usize, &mut residual_data)?;
+    let residuals = Fragment::read_nth_from(residual_count as usize, &mut residual_data)?;
 
     Ok(HpkIter {
         file,
         f,
         header: hdr,
-        start: Some(hpk::DirEntry::new_root()),
+        start: Some(DirEntry::new_root()),
         fragments,
         residuals,
         stack_list: vec![],
@@ -57,21 +57,21 @@ pub fn walk<P: AsRef<Path>>(file: P) -> io::Result<HpkIter> {
 pub struct HpkIter {
     file: PathBuf,
     f: File,
-    header: hpk::Header,
-    start: Option<hpk::DirEntry>,
-    pub fragments: Vec<Vec<hpk::Fragment>>,
-    pub residuals: Vec<hpk::Fragment>,
+    header: Header,
+    start: Option<DirEntry>,
+    pub fragments: Vec<Vec<Fragment>>,
+    pub residuals: Vec<Fragment>,
     stack_list: Vec<DirList>,
 }
 
 struct DirList {
-    entries: Vec<hpk::DirEntry>,
+    entries: Vec<DirEntry>,
 }
 
 impl Iterator for HpkIter {
-    type Item = io::Result<hpk::DirEntry>;
+    type Item = io::Result<DirEntry>;
 
-    fn next(&mut self) -> Option<io::Result<hpk::DirEntry>> {
+    fn next(&mut self) -> Option<io::Result<DirEntry>> {
         if let Some(dent) = self.start.take() {
             if let Some(result) = self.handle_entry(dent) {
                 return Some(result);
@@ -98,30 +98,30 @@ impl HpkIter {
         &self.file
     }
 
-    pub fn header(&self) -> &hpk::Header {
+    pub fn header(&self) -> &Header {
         &self.header
     }
 
-    pub fn read_file<F>(&self, entry: &hpk::DirEntry, op: F)
+    pub fn read_file<F>(&self, entry: &DirEntry, op: F)
     where
-        F: FnOnce(hpk::FragmentedReader<&File>) -> (),
+        F: FnOnce(FragmentedReader<&File>) -> (),
     {
         if !entry.is_dir() {
             let fragments = &self.fragments[entry.index()];
             let fragments: Vec<_> = fragments.iter().cloned().collect();
-            let r = hpk::FragmentedReader::new(&self.f, fragments);
+            let r = FragmentedReader::new(&self.f, fragments);
             op(r);
         }
     }
 
-    fn handle_entry(&mut self, dent: hpk::DirEntry) -> Option<io::Result<hpk::DirEntry>> {
+    fn handle_entry(&mut self, dent: DirEntry) -> Option<io::Result<DirEntry>> {
         if dent.is_dir() {
             itry!(self.push(&dent));
         }
         Some(Ok(dent))
     }
 
-    fn push(&mut self, dent: &hpk::DirEntry) -> io::Result<()> {
+    fn push(&mut self, dent: &DirEntry) -> io::Result<()> {
         let fragment = &self.fragments[dent.index()][0];
         let mut dir_entries = Cursor::new(vec![0; fragment.length as usize]);
 
@@ -130,7 +130,7 @@ impl HpkIter {
 
         let mut list = vec![];
         while dir_entries.position() < fragment.length {
-            let entry = hpk::DirEntry::read_from(dent.path(), dent.depth + 1, &mut dir_entries)?;
+            let entry = DirEntry::read_from(dent.path(), dent.depth + 1, &mut dir_entries)?;
             list.push(entry);
         }
         self.stack_list.push(DirList { entries: list });
@@ -143,9 +143,9 @@ impl HpkIter {
 }
 
 impl Iterator for DirList {
-    type Item = io::Result<hpk::DirEntry>;
+    type Item = io::Result<DirEntry>;
 
-    fn next(&mut self) -> Option<io::Result<hpk::DirEntry>> {
+    fn next(&mut self) -> Option<io::Result<DirEntry>> {
         if !self.entries.is_empty() {
             Some(Ok(self.entries.remove(0)))
         } else {

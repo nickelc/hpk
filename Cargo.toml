@@ -3,6 +3,14 @@ name = "hpk"
 version = "0.1.0"
 authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 
+[lib]
+name = "hpk"
+path = "src/hpk/mod.rs"
+
+[[bin]]
+name = "hpk"
+path = "src/main.rs"
+
 [dependencies]
 byteorder = "1.1"
 flate2 = "0.2"

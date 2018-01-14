@@ -4,8 +4,9 @@ extern crate walkdir;
 #[macro_use]
 extern crate clap;
 
+extern crate hpk;
+
 mod commands;
-mod hpk;
 
 use clap::{App, AppSettings};
 

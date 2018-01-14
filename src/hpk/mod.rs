@@ -1,3 +1,7 @@
+extern crate byteorder;
+extern crate flate2;
+extern crate walkdir;
+
 use std::cmp;
 use std::fs::File;
 use std::io::prelude::*;
