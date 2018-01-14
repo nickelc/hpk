@@ -16,7 +16,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     }
 
     SubCommand::with_name("create")
-        .about("create a new hpk archive")
+        .about("Create a new hpk archive")
         .display_order(0)
         .arg(Arg::from_usage("<dir> 'input directory'")
                 .validator(validate_dir))

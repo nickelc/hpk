@@ -14,7 +14,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     }
 
     SubCommand::with_name("list")
-        .about("list the content of a hpk archive")
+        .about("List the content of a hpk archive")
         .display_order(20)
         .arg(Arg::from_usage("<file> 'hpk archive'")
                 .validator(validate_input))

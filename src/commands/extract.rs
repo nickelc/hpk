@@ -24,14 +24,14 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     }
 
     SubCommand::with_name("extract")
-        .about("extract files from a hpk archive")
+        .about("Extract files from a hpk archive")
         .display_order(10)
         .arg(Arg::from_usage("<file> 'hpk archive'")
                 .validator(validate_input))
         .arg(Arg::from_usage("<dest> 'destination folder'")
                 .validator(validate_dest))
-        .arg(Arg::from_usage("[force] --force"))
-        .arg(Arg::from_usage("[verbose] -v 'verbosely list files processed'"))
+        .arg(Arg::from_usage("[force] --force 'Force extraction if destination folder is not empty'"))
+        .arg(Arg::from_usage("[verbose] -v 'Verbosely list files processed'"))
 }
 
 pub fn execute(matches: &ArgMatches) {
