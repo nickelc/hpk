@@ -33,15 +33,26 @@ pub fn execute(matches: &ArgMatches) {
     println!("  fragments_per_file: {}", walk.header().fragments_per_file);
     println!("  fragments_filesystem_offset: 0x{:X}", walk.header().fragmented_filesystem_offset);
     println!("  fragments_filesystem_count: {}", walk.header().fragmented_filesystem_count);
-    println!("  fragments_filesystem_entries: {}", walk.header().filesystem_entries());
-    println!("fragments:");
+    println!("filesystem entries: {}", walk.header().filesystem_entries());
+    println!("filesystem fragments:");
     for chunk in &walk.fragments {
-        let mut start = Some(true);
+        let mut start = if walk.header().fragments_per_file == 1 {
+            None
+        } else {
+            Some(true)
+        };
         for fragment in chunk {
             print!("{}", if start.take().is_some() { "- " } else { "  " });
             println!("0x{:<6X} len: {}", fragment.offset, fragment.length);
         }
     }
+    if !walk.residuals.is_empty() {
+        println!("residual fragments:");
+        for f in &walk.residuals {
+            println!("  0x{:<6X} len: {}", f.offset, f.length);
+        }
+    }
+
     while let Some(Ok(dent)) = walk.next() {
         println!("{} index={} depth={} {:?}",
             if dent.is_dir() { "dir: " } else { "file:" },
