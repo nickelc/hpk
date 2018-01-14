@@ -587,7 +587,7 @@ where
                 io::copy(&mut t, &mut chunk)?;
                 file = t.into_inner();
 
-                let mut encoder = ZlibEncoder::new(vec![], Compression::Best);
+                let mut encoder = ZlibEncoder::new(vec![], Compression::best());
                 let mut chunk = Cursor::new(chunk);
                 io::copy(&mut chunk, &mut encoder)?;
 

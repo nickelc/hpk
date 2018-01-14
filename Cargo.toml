@@ -1,6 +1,7 @@
 [package]
 name = "hpk"
 version = "0.1.0"
+description = "HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran etc.)"
 authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 
 [lib]
@@ -12,9 +13,8 @@ name = "hpk"
 path = "src/main.rs"
 
 [dependencies]
-byteorder = "1.1"
-flate2 = "0.2"
-tempdir = "0.3"
+byteorder = "1"
+flate2 = "1"
 walkdir="2"
 
 [dependencies.clap]
