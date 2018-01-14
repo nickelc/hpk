@@ -56,7 +56,7 @@ pub fn execute(matches: &ArgMatches) {
     while let Some(Ok(dent)) = walk.next() {
         println!("{} index={} depth={} {:?}",
             if dent.is_dir() { "dir: " } else { "file:" },
-            dent.index(),
+            dent.index() + 1,
             dent.depth(),
             dent.path().display(),
         );
