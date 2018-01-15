@@ -395,27 +395,34 @@ impl CompressionHeader {
 
         let inflated_length = r.read_u32::<LittleEndian>()?;
         let chunk_size = r.read_i32::<LittleEndian>()?;
-        let mut offsets = vec![r.read_u32::<LittleEndian>()? as u64];
-        if offsets[0] != 16 {
-            for _ in 0..((offsets[0] - 16) / 4) {
-                offsets.push(r.read_u32::<LittleEndian>()? as u64);
+        let chunks = match r.read_u32::<LittleEndian>() {
+            Ok(val) => {
+                let mut offsets = vec![val as u64];
+                if offsets[0] != 16 {
+                    for _ in 0..((offsets[0] - 16) / 4) {
+                        offsets.push(r.read_u32::<LittleEndian>()? as u64);
+                    }
+                }
+                let mut chunks = vec![
+                    Chunk {
+                        offset: 0,
+                        length: 0,
+                    };
+                    offsets.len()
+                ];
+                let mut len = length;
+                for (i, offset) in offsets.iter().enumerate().rev() {
+                    chunks[i] = Chunk {
+                        offset: *offset,
+                        length: len - offset,
+                    };
+                    len -= chunks[i].length;
+                }
+                chunks
             }
-        }
-        let mut chunks = vec![
-            Chunk {
-                offset: 0,
-                length: 0,
-            };
-            offsets.len()
-        ];
-        let mut len = length;
-        for (i, offset) in offsets.iter().enumerate().rev() {
-            chunks[i] = Chunk {
-                offset: *offset,
-                length: len - offset,
-            };
-            len -= chunks[i].length;
-        }
+            Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => vec![],
+            Err(e) => return Err(e),
+        };
 
         Ok(CompressionHeader {
             _identifier,
@@ -579,6 +586,12 @@ where
             let mut offsets = vec![];
 
             loop {
+                if length == 0 {
+                    // breaking here writes a hpk zlib header without any chunks
+                    // it's the same behaviour as in a DLC file for Tropico 4
+                    break;
+                }
+
                 let position = output_buffer.len() as i32;
                 offsets.push(position);
 
