@@ -1,5 +1,6 @@
 extern crate byteorder;
 extern crate flate2;
+extern crate lz4;
 extern crate walkdir;
 
 use std::cmp;
@@ -17,6 +18,7 @@ use flate2::Compression;
 use flate2::read::ZlibDecoder;
 use flate2::write::ZlibEncoder;
 
+mod compression;
 mod walk;
 
 pub use self::walk::walk;

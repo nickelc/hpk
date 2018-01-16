@@ -15,6 +15,7 @@ path = "src/main.rs"
 [dependencies]
 byteorder = "1"
 flate2 = "1"
+lz4="1"
 walkdir="2"
 
 [dependencies.clap]
