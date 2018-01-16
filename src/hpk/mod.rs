@@ -394,18 +394,18 @@ fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> io::Result<
                 // no data left.
                 break;
             }
-            Ok(n) => n,
+            Ok(n) => n as u32,
             Err(e) => return Err(e),
         };
 
-        let position = output_buffer.len() as i32;
+        let position = output_buffer.len() as u32;
         offsets.push(position);
 
         let mut chunk = Cursor::new(chunk);
         T::encode_chunk(&mut chunk, &mut output_buffer)?;
     }
 
-    let header_size = CompressionHeader::write(inflated_length as u32, offsets, w)?;
+    let header_size = CompressionHeader::write(inflated_length, offsets, w)?;
 
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
@@ -454,7 +454,7 @@ impl Compression {
 pub struct CompressionHeader {
     pub compressor: Compression,
     pub inflated_length: u32,
-    pub chunk_size: i32,
+    pub chunk_size: u32,
     pub chunks: Vec<Chunk>,
 }
 
@@ -470,7 +470,7 @@ impl CompressionHeader {
         let compressor = Compression::read_from(r)?;
 
         let inflated_length = r.read_u32::<LittleEndian>()?;
-        let chunk_size = r.read_i32::<LittleEndian>()?;
+        let chunk_size = r.read_u32::<LittleEndian>()?;
         let chunks = match r.read_u32::<LittleEndian>() {
             Ok(val) => {
                 let mut offsets = vec![val as u64];
@@ -508,18 +508,18 @@ impl CompressionHeader {
         })
     }
 
-    pub fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<u64> {
-        const CHUNK_SIZE: i32 = 32768;
-        const HDR_SIZE: i32 = 12;
+    pub fn write(inflated_length: u32, offsets: Vec<u32>, out: &mut Write) -> io::Result<u64> {
+        const CHUNK_SIZE: u32 = 32768;
+        const HDR_SIZE: u32 = 12;
 
         Compression::Zlib.write_identifier(out)?;
         out.write_u32::<LittleEndian>(inflated_length)?;
-        out.write_i32::<LittleEndian>(CHUNK_SIZE)?;
+        out.write_u32::<LittleEndian>(CHUNK_SIZE)?;
 
-        let offsets_size = offsets.len() as i32 * 4;
+        let offsets_size = offsets.len() as u32 * 4;
         let offsets = offsets.iter().map(|x| HDR_SIZE + offsets_size + x);
         for offset in offsets {
-            out.write_i32::<LittleEndian>(offset)?;
+            out.write_u32::<LittleEndian>(offset)?;
         }
 
         Ok((HDR_SIZE + offsets_size) as u64)
