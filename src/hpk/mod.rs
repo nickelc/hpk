@@ -362,8 +362,87 @@ impl DirEntry {
     }
 }
 
+pub fn is_compressed<T: Read + Seek>(r: &mut T) -> bool {
+    let pos = r.seek(SeekFrom::Current(0)).expect("failed to get current position");
+    let compressed = match Compression::read_from(r) {
+        Ok(ref c) if *c == Compression::None => false,
+        Ok(_) => true,
+        Err(_) => false,
+    };
+    r.seek(SeekFrom::Start(pos)).expect("failed to seek to previous position");
+
+    compressed
+}
+
+/// Compresses the data using the encoder used
+///
+/// if no data is written at all the hpk compression header is written without any chunks
+/// it's the same behaviour as in a DLC file for Tropico 4
+///
+fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> io::Result<u64> {
+    const CHUNK_SIZE: u64 = 32768;
+    let mut inflated_length = 0;
+    let mut output_buffer = vec![];
+    let mut offsets = vec![];
+
+    loop {
+        let mut chunk = vec![];
+        let mut t = r.take(CHUNK_SIZE);
+
+        inflated_length += match io::copy(&mut t, &mut chunk) {
+            Ok(0) => {
+                // no data left.
+                break;
+            }
+            Ok(n) => n,
+            Err(e) => return Err(e),
+        };
+
+        let position = output_buffer.len() as i32;
+        offsets.push(position);
+
+        let mut chunk = Cursor::new(chunk);
+        T::encode_chunk(&mut chunk, &mut output_buffer)?;
+    }
+
+    let header_size = CompressionHeader::write(inflated_length as u32, offsets, w)?;
+
+    Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
+}
+
+#[derive(PartialEq)]
+pub enum Compression {
+    Zlib,
+    Lz4,
+    None,
+}
+
+impl Compression {
+    fn read_from<T: Read>(r: &mut T) -> io::Result<Self> {
+        let mut buf = [0; 4];
+        match r.read_exact(&mut buf) {
+            Ok(_) => {
+                match (buf.eq(b"ZLIB"), buf.eq(b"LZ4 ")) {
+                    (true, _) => Ok(Compression::Zlib),
+                    (_, true) => Ok(Compression::Lz4),
+                    (_, _) => Ok(Compression::None),
+                }
+            }
+            Err(e) => return Err(e),
+        }
+    }
+
+    fn write_identifier(&self, w: &mut Write) -> io::Result<u64> {
+        match *self {
+            Compression::Zlib => { w.write(b"ZLIB")?; Ok(4) },
+            Compression::Lz4 => { w.write(b"LZ4 ")?; Ok(4) },
+            Compression::None => Ok(0),
+        }
+    }
+}
+
 pub struct CompressionHeader {
-    _identifier: [u8; 4],
+    pub compressor: Compression,
     pub inflated_length: u32,
     pub chunk_size: i32,
     pub chunks: Vec<Chunk>,
@@ -377,21 +456,8 @@ pub struct Chunk {
 
 impl CompressionHeader {
 
-    pub fn is_compressed<T: Read + Seek>(r: &mut T) -> bool {
-        let mut buf = [0; 4];
-        let pos = r.seek(SeekFrom::Current(0)).expect("failed to get current position");
-        let compressed = match r.read_exact(&mut buf) {
-            Ok(_) => buf.eq(b"ZLIB"),
-            Err(_) => false,
-        };
-        r.seek(SeekFrom::Start(pos)).expect("failed seek to previous position");
-
-        compressed
-    }
-
     pub fn read_from<T: Read>(length: u64, r: &mut T) -> io::Result<CompressionHeader> {
-        let mut _identifier = [0; 4];
-        r.read_exact(&mut _identifier)?;
+        let compressor = Compression::read_from(r)?;
 
         let inflated_length = r.read_u32::<LittleEndian>()?;
         let chunk_size = r.read_i32::<LittleEndian>()?;
@@ -425,18 +491,18 @@ impl CompressionHeader {
         };
 
         Ok(CompressionHeader {
-            _identifier,
+            compressor,
             inflated_length,
             chunk_size,
             chunks: chunks,
         })
     }
 
-    pub fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<()> {
+    pub fn write(inflated_length: u32, offsets: Vec<i32>, out: &mut Write) -> io::Result<u64> {
         const CHUNK_SIZE: i32 = 32768;
         const HDR_SIZE: i32 = 12;
 
-        out.write("ZLIB".as_bytes())?;
+        Compression::Zlib.write_identifier(out)?;
         out.write_u32::<LittleEndian>(inflated_length)?;
         out.write_i32::<LittleEndian>(CHUNK_SIZE)?;
 
@@ -446,7 +512,7 @@ impl CompressionHeader {
             out.write_i32::<LittleEndian>(offset)?;
         }
 
-        Ok(())
+        Ok((HDR_SIZE + offsets_size) as u64)
     }
 }
 
@@ -454,7 +520,7 @@ pub fn copy<W>(mut r: FragmentedReader<&File>, mut w: &mut W) -> io::Result<u64>
 where
     W: Write,
 {
-    if CompressionHeader::is_compressed(&mut r) {
+    if is_compressed(&mut r) {
         let mut written = 0;
         let hdr = CompressionHeader::read_from(r.len(), &mut r)?;
         for chunk in &hdr.chunks {
@@ -572,59 +638,26 @@ where
     where
         W: Write + Seek,
     {
-        use compression::Encoder;
-        const CHUNK_SIZE: u64 = 32768;
         let extensions = vec!["lst", "lua", "xml", "tga", "dds", "xtex", "bin", "csv"];
 
-        let compress = file.extension()
+        let _compress = file.extension()
             .map(|e| extensions.contains(&e.to_str().unwrap()))
             .unwrap_or(false);
 
-        if compress {
-            let length = file.metadata()?.len();
+        if _compress {
             let mut file = File::open(file)?;
-            let mut output_buffer = vec![];
-            let mut offsets = vec![];
-
-            loop {
-                if length == 0 {
-                    // breaking here writes a hpk zlib header without any chunks
-                    // it's the same behaviour as in a DLC file for Tropico 4
-                    break;
-                }
-
-                let position = output_buffer.len() as i32;
-                offsets.push(position);
-
-                let mut chunk = vec![];
-                let mut t = file.take(CHUNK_SIZE);
-                io::copy(&mut t, &mut chunk)?;
-                file = t.into_inner();
-
-                let mut chunk = Cursor::new(chunk);
-                compression::Zlib::encode_chunk(&mut chunk, &mut output_buffer)?;
-
-                if file.seek(SeekFrom::Current(0))? == length {
-                    break;
-                }
-            }
-
             let position = w.seek(SeekFrom::Current(0))?;
 
-            CompressionHeader::write(length as u32, offsets, w)?;
-            io::copy(&mut Cursor::new(output_buffer), w)?;
+            let n = compress::<compression::Zlib>(&mut file, w)?;
 
-            let current_pos = w.seek(SeekFrom::Current(0))?;
-
-            Ok(Fragment::new(position, current_pos - position))
+            Ok(Fragment::new(position, n))
 
         } else {
             let position = w.seek(SeekFrom::Current(0))?;
             let mut input = File::open(file)?;
-            io::copy(&mut input, w)?;
-            let current_pos = w.seek(SeekFrom::Current(0))?;
+            let n = io::copy(&mut input, w)?;
 
-            Ok(Fragment::new(position, current_pos - position))
+            Ok(Fragment::new(position, n))
         }
     }
     // }}}
