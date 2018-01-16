@@ -67,7 +67,8 @@ pub fn execute(matches: &ArgMatches) {
                 println!(" empty file");
             } else if hpk::is_compressed(&mut r) {
                 let hdr = hpk::CompressionHeader::read_from(r.len(), &mut r).unwrap();
-                println!(" compressed: inflated_length={} chunk_size={} chunks={}",
+                println!(" compressed: {} inflated_length={} chunk_size={} chunks={}",
+                    hdr.compressor,
                     hdr.inflated_length,
                     hdr.chunk_size,
                     hdr.chunks.len()

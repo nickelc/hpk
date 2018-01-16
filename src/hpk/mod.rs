@@ -417,6 +417,16 @@ pub enum Compression {
     None,
 }
 
+impl std::fmt::Display for Compression {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+        match *self {
+            Compression::Zlib => write!(f, "ZLIB"),
+            Compression::Lz4 => write!(f, "LZ4"),
+            Compression::None => write!(f, "None"),
+        }
+    }
+}
+
 impl Compression {
     fn read_from<T: Read>(r: &mut T) -> io::Result<Self> {
         let mut buf = [0; 4];
