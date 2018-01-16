@@ -26,13 +26,13 @@ impl Decoder for Lz4 {
 impl Encoder for Lz4 {
     fn encode_chunk<R: Read, W: Write>(r: &mut R, w: &mut W) -> io::Result<u64> {
         let mut enc = lz4::EncoderBuilder::new().build(vec![])?;
-        println!("copied {} bytes into lz4 encoder", io::copy(r, &mut enc)?);
+        io::copy(r, &mut enc)?;
         match enc.finish() {
             (buf, Ok(_)) => {
                 let mut buf = Cursor::new(buf);
                 io::copy(&mut buf, w)
             }
-            (_, Err(e)) => Err(e)
+            (_, Err(e)) => Err(e),
         }
     }
 }
@@ -48,13 +48,13 @@ impl Decoder for Zlib {
 impl Encoder for Zlib {
     fn encode_chunk<R: Read, W: Write>(r: &mut R, w: &mut W) -> io::Result<u64> {
         let mut enc = flate2::write::ZlibEncoder::new(vec![], flate2::Compression::best());
-        println!("copied {} bytes into zlib encoder", io::copy(r, &mut enc)?);
+        io::copy(r, &mut enc)?;
         match enc.finish() {
             Ok(buf) => {
                 let mut buf = Cursor::new(buf);
                 io::copy(&mut buf, w)
             }
-            Err(e) => Err(e)
+            Err(e) => Err(e),
         }
     }
 }

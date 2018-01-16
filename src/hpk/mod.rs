@@ -14,9 +14,7 @@ use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 use byteorder::{LittleEndian, BigEndian, ReadBytesExt, WriteBytesExt};
-use flate2::Compression;
 use flate2::read::ZlibDecoder;
-use flate2::write::ZlibEncoder;
 
 mod compression;
 mod walk;
@@ -574,6 +572,7 @@ where
     where
         W: Write + Seek,
     {
+        use compression::Encoder;
         const CHUNK_SIZE: u64 = 32768;
         let extensions = vec!["lst", "lua", "xml", "tga", "dds", "xtex", "bin", "csv"];
 
@@ -602,20 +601,8 @@ where
                 io::copy(&mut t, &mut chunk)?;
                 file = t.into_inner();
 
-                let mut encoder = ZlibEncoder::new(vec![], Compression::best());
                 let mut chunk = Cursor::new(chunk);
-                io::copy(&mut chunk, &mut encoder)?;
-
-                match encoder.finish() {
-                    Ok(ref buf) if buf.len() as u64 == CHUNK_SIZE => {
-                        io::copy(&mut chunk, &mut output_buffer)?;
-                    }
-                    Ok(buf) => {
-                        let mut buf = Cursor::new(buf);
-                        io::copy(&mut buf, &mut output_buffer)?;
-                    }
-                    Err(_) => {}
-                };
+                compression::Zlib::encode_chunk(&mut chunk, &mut output_buffer)?;
 
                 if file.seek(SeekFrom::Current(0))? == length {
                     break;
