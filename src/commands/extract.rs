@@ -57,13 +57,13 @@ pub fn execute(matches: &ArgMatches) {
                     fs::create_dir(path).unwrap();
                 }
             } else {
-                walk.read_file(&entry, |r| {
+                walk.read_file(&entry, |mut r| {
                     let out = dest.join(entry.path());
                     if verbose {
                         println!("{}", out.display());
                     }
                     let mut out = File::create(out).unwrap();
-                    hpk::copy(r, &mut out).unwrap();
+                    hpk::copy(&mut r, &mut out).unwrap();
                 });
             }
         }

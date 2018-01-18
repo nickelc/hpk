@@ -14,8 +14,7 @@ use std::str;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
-use byteorder::{LittleEndian, BigEndian, ReadBytesExt, WriteBytesExt};
-use flate2::read::ZlibDecoder;
+use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
 mod compression;
 mod walk;
@@ -363,6 +362,17 @@ impl DirEntry {
     }
 }
 
+pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
+    let pos = r.seek(SeekFrom::Current(0)).expect("failed to get current position");
+    let compression = match Compression::read_from(r) {
+        Ok(c) => c,
+        Err(_) => Compression::None,
+    };
+    r.seek(SeekFrom::Start(pos)).expect("failed to seek to previous position");
+
+    compression
+}
+
 pub fn is_compressed<T: Read + Seek>(r: &mut T) -> bool {
     let pos = r.seek(SeekFrom::Current(0)).expect("failed to get current position");
     let compressed = match Compression::read_from(r) {
@@ -411,6 +421,23 @@ fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> io::Result<
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
 
+fn decompress<T: compression::Decoder>(length: u64, r: &mut Read, w: &mut Write) -> io::Result<u64> {
+    let hdr = CompressionHeader::read_from(length, r)?;
+    let mut written = 0;
+    for chunk in &hdr.chunks {
+        let mut buf = vec![0; chunk.length as usize];
+        r.read_exact(&mut buf)?;
+        written += match T::decode_chunk(&mut Cursor::new(&buf), w) {
+            Ok(n) => n,
+            Err(_) => {
+                // chunk seems to be not compressed
+                io::copy(&mut Cursor::new(buf), w)?
+            }
+        };
+    }
+    Ok(written)
+}
+
 #[derive(PartialEq)]
 pub enum Compression {
     Zlib,
@@ -429,7 +456,7 @@ impl std::fmt::Display for Compression {
 }
 
 impl Compression {
-    fn read_from<T: Read>(r: &mut T) -> io::Result<Self> {
+    fn read_from<T: Read + ?Sized>(r: &mut T) -> io::Result<Self> {
         let mut buf = [0; 4];
         match r.read_exact(&mut buf) {
             Ok(_) => {
@@ -467,7 +494,7 @@ pub struct Chunk {
 
 impl CompressionHeader {
 
-    pub fn read_from<T: Read>(length: u64, r: &mut T) -> io::Result<CompressionHeader> {
+    pub fn read_from<T: Read + ?Sized>(length: u64, r: &mut T) -> io::Result<CompressionHeader> {
         let compressor = Compression::read_from(r)?;
 
         let inflated_length = r.read_u32::<LittleEndian>()?;
@@ -527,40 +554,14 @@ impl CompressionHeader {
     }
 }
 
-pub fn copy<W>(mut r: FragmentedReader<&File>, mut w: &mut W) -> io::Result<u64>
+pub fn copy<W>(r: &mut FragmentedReader<&File>, w: &mut W) -> io::Result<u64>
 where
     W: Write,
 {
-    if is_compressed(&mut r) {
-        let mut written = 0;
-        let hdr = CompressionHeader::read_from(r.len(), &mut r)?;
-        for chunk in &hdr.chunks {
-            r.seek(SeekFrom::Start(chunk.offset))?;
-
-            // quick check of the zlib header
-            let check = r.read_u16::<BigEndian>()?;
-            let is_zlib = check % 31 == 0;
-
-            if is_zlib {
-                r.seek(SeekFrom::Start(chunk.offset))?;
-                let take = r.take(chunk.length);
-                let mut dec = ZlibDecoder::new(take);
-                if let Ok(n) = io::copy(&mut dec, &mut w) {
-                    written += n;
-                    r = dec.into_inner().into_inner();
-                    continue;
-                }
-                r = dec.into_inner().into_inner();
-            }
-            // chunk is not compressed
-            r.seek(SeekFrom::Start(chunk.offset))?;
-            let mut take = r.take(chunk.length);
-            written += io::copy(&mut take, &mut w)?;
-            r = take.into_inner();
-        }
-        Ok(written)
-    } else {
-        io::copy(&mut r, &mut w)
+    match get_compression(r) {
+        Compression::Lz4 => decompress::<compression::Lz4Block>(r.len(), r, w),
+        Compression::Zlib => decompress::<compression::Zlib>(r.len(), r, w),
+        Compression::None => io::copy(r, w),
     }
 }
 
