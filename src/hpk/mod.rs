@@ -1,6 +1,7 @@
 extern crate byteorder;
 extern crate flate2;
 extern crate lz4;
+extern crate lz4_compress;
 extern crate walkdir;
 
 use std::cmp;
