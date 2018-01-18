@@ -373,18 +373,6 @@ pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
     compression
 }
 
-pub fn is_compressed<T: Read + Seek>(r: &mut T) -> bool {
-    let pos = r.seek(SeekFrom::Current(0)).expect("failed to get current position");
-    let compressed = match Compression::read_from(r) {
-        Ok(ref c) if *c == Compression::None => false,
-        Ok(_) => true,
-        Err(_) => false,
-    };
-    r.seek(SeekFrom::Start(pos)).expect("failed to seek to previous position");
-
-    compressed
-}
-
 /// Compresses the data using the encoder used
 ///
 /// if no data is written at all the hpk compression header is written without any chunks
@@ -456,6 +444,13 @@ impl std::fmt::Display for Compression {
 }
 
 impl Compression {
+    pub fn is_compressed(&self) -> bool {
+        match *self {
+            Compression::None => false,
+            _ => true,
+        }
+    }
+
     fn read_from<T: Read + ?Sized>(r: &mut T) -> io::Result<Self> {
         let mut buf = [0; 4];
         match r.read_exact(&mut buf) {
