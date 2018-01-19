@@ -4,6 +4,9 @@ version = "0.1.0"
 description = "HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran etc.)"
 authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 
+[features]
+lz4frame = ["lz4"]
+
 [lib]
 name = "hpk"
 path = "src/hpk/mod.rs"
@@ -15,13 +18,16 @@ path = "src/main.rs"
 [dependencies]
 byteorder = "1"
 flate2 = "1"
-lz4="1"
 lz4-compress="0"
 walkdir="2"
 
 [dependencies.clap]
 default-features = false
 version = "^2"
+
+[dependencies.lz4]
+version="1"
+optional=true
 
 [profile.release]
 lto=true

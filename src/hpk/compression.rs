@@ -3,6 +3,7 @@ use std::io;
 use std::io::Cursor;
 
 use flate2;
+#[cfg(feature = "lz4frame")]
 use lz4;
 use lz4_compress;
 
@@ -17,6 +18,7 @@ pub trait Encoder {
 pub enum Zlib {}
 pub enum Lz4Block {}
 #[allow(dead_code)]
+#[cfg(feature = "lz4frame")]
 pub enum Lz4Frame {}
 
 impl Decoder for Lz4Block {
@@ -38,6 +40,7 @@ impl Encoder for Lz4Block {
     }
 }
 
+#[cfg(feature = "lz4frame")]
 impl Decoder for Lz4Frame {
     fn decode_chunk<R: Read + ?Sized, W: Write + ?Sized>(r: &mut R, w: &mut W) -> io::Result<u64> {
         let mut dec = lz4::Decoder::new(r)?;
@@ -45,6 +48,7 @@ impl Decoder for Lz4Frame {
     }
 }
 
+#[cfg(feature = "lz4frame")]
 impl Encoder for Lz4Frame {
     fn encode_chunk<R: Read, W: Write>(r: &mut R, w: &mut W) -> io::Result<u64> {
         let mut enc = lz4::EncoderBuilder::new().build(vec![])?;
@@ -106,6 +110,7 @@ mod tests {
     }
 
     #[test]
+    #[cfg(feature = "lz4frame")]
     fn lz4_frame() {
         let input = "Hello World".as_bytes();
         let mut buf = vec![];
