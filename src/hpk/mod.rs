@@ -76,7 +76,7 @@ impl Header {
         w.write(&self._identifier)?;
         w.write_u32::<LittleEndian>(self.data_offset)?;
         w.write_u32::<LittleEndian>(self.fragments_per_file)?;
-        w.write_u32::<LittleEndian>(self._unknown2).unwrap();
+        w.write_u32::<LittleEndian>(self._unknown2)?;
         w.write_u32::<LittleEndian>(self.fragments_residual_offset as u32)?;
         w.write_u32::<LittleEndian>(self.fragments_residual_count as u32)?;
         w.write_u32::<LittleEndian>(self._unknown5)?;
