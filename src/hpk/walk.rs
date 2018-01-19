@@ -1,5 +1,4 @@
 use std::io::prelude::*;
-use std::io;
 use std::io::Cursor;
 use std::io::SeekFrom;
 use std::fs::File;
@@ -17,7 +16,7 @@ macro_rules! itry {
     }
 }
 
-pub fn walk<P: AsRef<Path>>(file: P) -> io::Result<HpkIter> {
+pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
     let file = file.as_ref().to_path_buf();
     let mut f = File::open(&file)?;
 
@@ -69,9 +68,9 @@ struct DirList {
 }
 
 impl Iterator for HpkIter {
-    type Item = io::Result<DirEntry>;
+    type Item = HpkResult<DirEntry>;
 
-    fn next(&mut self) -> Option<io::Result<DirEntry>> {
+    fn next(&mut self) -> Option<HpkResult<DirEntry>> {
         if let Some(dent) = self.start.take() {
             if let Some(result) = self.handle_entry(dent) {
                 return Some(result);
@@ -114,14 +113,14 @@ impl HpkIter {
         }
     }
 
-    fn handle_entry(&mut self, dent: DirEntry) -> Option<io::Result<DirEntry>> {
+    fn handle_entry(&mut self, dent: DirEntry) -> Option<HpkResult<DirEntry>> {
         if dent.is_dir() {
             itry!(self.push(&dent));
         }
         Some(Ok(dent))
     }
 
-    fn push(&mut self, dent: &DirEntry) -> io::Result<()> {
+    fn push(&mut self, dent: &DirEntry) -> HpkResult<()> {
         let fragment = &self.fragments[dent.index()][0];
         let mut dir_entries = Cursor::new(vec![0; fragment.length as usize]);
 
@@ -143,9 +142,9 @@ impl HpkIter {
 }
 
 impl Iterator for DirList {
-    type Item = io::Result<DirEntry>;
+    type Item = HpkResult<DirEntry>;
 
-    fn next(&mut self) -> Option<io::Result<DirEntry>> {
+    fn next(&mut self) -> Option<HpkResult<DirEntry>> {
         if !self.entries.is_empty() {
             Some(Ok(self.entries.remove(0)))
         } else {

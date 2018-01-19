@@ -25,6 +25,29 @@ pub use self::walk::walk;
 const HPK_SIG: [u8; 4] = *b"BPUL";
 const HEADER_LENGTH: u8 = 36;
 
+type HpkResult<T> = Result<T, HpkError>;
+
+#[derive(Debug)]
+pub enum HpkError {
+    InvalidHeader,
+    InvalidDirEntryName(str::Utf8Error),
+    InvalidFragmentIndex,
+    Io(io::Error),
+    WalkDir(walkdir::Error),
+}
+
+impl From<io::Error> for HpkError {
+    fn from(err: io::Error) -> HpkError {
+        HpkError::Io(err)
+    }
+}
+
+impl From<walkdir::Error> for HpkError {
+    fn from(err: walkdir::Error) -> HpkError {
+        HpkError::WalkDir(err)
+    }
+}
+
 pub struct Header {
     _identifier: [u8; 4],
     pub data_offset: u32,
@@ -53,11 +76,11 @@ impl Header {
         }
     }
 
-    pub fn read_from<T: Read>(mut r: T) -> io::Result<Self> {
+    pub fn read_from<T: Read>(mut r: T) -> HpkResult<Self> {
         let mut sig = [0; 4];
         r.read_exact(&mut sig)?;
         if !sig.eq(&HPK_SIG) {
-            return Err(io::Error::new(io::ErrorKind::InvalidData, "invalid hpk header"));
+            return Err(HpkError::InvalidHeader);
         }
         Ok(Header {
             _identifier: sig,
@@ -72,7 +95,7 @@ impl Header {
         })
     }
 
-    pub fn write(&self, w: &mut Write) -> io::Result<()> {
+    pub fn write(&self, w: &mut Write) -> HpkResult<()> {
         w.write(&self._identifier)?;
         w.write_u32::<LittleEndian>(self.data_offset)?;
         w.write_u32::<LittleEndian>(self.fragments_per_file)?;
@@ -100,13 +123,13 @@ pub struct Fragment {
 
 impl Fragment {
 
-    pub fn read_from<T: Read>(mut r: T) -> io::Result<Fragment> {
+    pub fn read_from<T: Read>(mut r: T) -> HpkResult<Fragment> {
         let offset = u64::from(r.read_u32::<LittleEndian>()?);
         let length = u64::from(r.read_u32::<LittleEndian>()?);
         Ok(Fragment { offset, length })
     }
 
-    pub fn read_nth_from<T: Read>(n: usize, mut r: T) -> io::Result<Vec<Fragment>> {
+    pub fn read_nth_from<T: Read>(n: usize, mut r: T) -> HpkResult<Vec<Fragment>> {
         let mut fragments = Vec::with_capacity(n);
         for _ in 0..n {
             fragments.push(Fragment::read_from(&mut r)?);
@@ -118,7 +141,7 @@ impl Fragment {
         Fragment { offset, length }
     }
 
-    pub fn write(&self, w: &mut Write) -> io::Result<()> {
+    pub fn write(&self, w: &mut Write) -> HpkResult<()> {
         w.write_u32::<LittleEndian>(self.offset as u32)?;
         w.write_u32::<LittleEndian>(self.length as u32)?;
 
@@ -319,14 +342,9 @@ impl DirEntry {
         }
     }
 
-    fn read_from<T: Read>(parent: &Path, depth: usize, mut r: T) -> io::Result<DirEntry> {
-        let fragment_index = r.read_u32::<LittleEndian>()?.checked_sub(1).ok_or_else(
-            || {
-                io::Error::new(
-                    io::ErrorKind::InvalidData,
-                    "invalid data for fragment index",
-                )
-            },
+    fn read_from<T: Read>(parent: &Path, depth: usize, mut r: T) -> HpkResult<DirEntry> {
+        let fragment_index = r.read_u32::<LittleEndian>()?.checked_sub(1).ok_or(
+            HpkError::InvalidFragmentIndex,
         )?;
 
         let ft = r.read_u32::<LittleEndian>().map(|t| if t == 0 {
@@ -338,9 +356,9 @@ impl DirEntry {
         let name_length = r.read_u16::<LittleEndian>()?;
         let mut buf = vec![0; name_length as usize];
         r.read_exact(&mut buf)?;
-        let name = str::from_utf8(&buf).map_err(|_| {
-            io::Error::new(io::ErrorKind::InvalidData, "invalid name for entry")
-        })?;
+        let name = str::from_utf8(&buf).map_err(
+            |e| HpkError::InvalidDirEntryName(e),
+        )?;
 
         Ok(DirEntry {
             path: parent.join(name),
@@ -349,7 +367,7 @@ impl DirEntry {
         })
     }
 
-    pub fn write(&self, w: &mut Write) -> io::Result<()> {
+    pub fn write(&self, w: &mut Write) -> HpkResult<()> {
         let (index, _type) = match self.ft {
             FileType::Dir(index) => (index, 1),
             FileType::File(index) => (index, 0),
@@ -379,7 +397,7 @@ pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
 /// if no data is written at all the hpk compression header is written without any chunks
 /// it's the same behaviour as in a DLC file for Tropico 4
 ///
-fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> io::Result<u64> {
+fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> HpkResult<u64> {
     const CHUNK_SIZE: u64 = 32768;
     let mut inflated_length = 0;
     let mut output_buffer = vec![];
@@ -395,7 +413,7 @@ fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> io::Result<
                 break;
             }
             Ok(n) => n as u32,
-            Err(e) => return Err(e),
+            Err(e) => return Err(HpkError::Io(e)),
         };
 
         let position = output_buffer.len() as u32;
@@ -410,7 +428,7 @@ fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> io::Result<
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
 
-fn decompress<T: compression::Decoder>(length: u64, r: &mut Read, w: &mut Write) -> io::Result<u64> {
+fn decompress<T: compression::Decoder>(length: u64, r: &mut Read, w: &mut Write) -> HpkResult<u64> {
     let hdr = CompressionHeader::read_from(length, r)?;
     let mut written = 0;
     for chunk in &hdr.chunks {
@@ -452,7 +470,7 @@ impl Compression {
         }
     }
 
-    fn read_from<T: Read + ?Sized>(r: &mut T) -> io::Result<Self> {
+    fn read_from<T: Read + ?Sized>(r: &mut T) -> HpkResult<Self> {
         let mut buf = [0; 4];
         match r.read_exact(&mut buf) {
             Ok(_) => {
@@ -462,14 +480,14 @@ impl Compression {
                     (_, _) => Ok(Compression::None),
                 }
             }
-            Err(e) => return Err(e),
+            Err(e) => return Err(HpkError::Io(e)),
         }
     }
 
-    fn write_identifier(&self, w: &mut Write) -> io::Result<u64> {
+    fn write_identifier(&self, w: &mut Write) -> HpkResult<u64> {
         match *self {
-            Compression::Zlib => { w.write(b"ZLIB")?; Ok(4) },
-            Compression::Lz4 => { w.write(b"LZ4 ")?; Ok(4) },
+            Compression::Zlib => Ok(w.write(b"ZLIB")? as u64),
+            Compression::Lz4 => Ok(w.write(b"LZ4 ")? as u64),
             Compression::None => Ok(0),
         }
     }
@@ -490,7 +508,7 @@ pub struct Chunk {
 
 impl CompressionHeader {
 
-    pub fn read_from<T: Read + ?Sized>(length: u64, r: &mut T) -> io::Result<CompressionHeader> {
+    pub fn read_from<T: Read + ?Sized>(length: u64, r: &mut T) -> HpkResult<CompressionHeader> {
         let compressor = Compression::read_from(r)?;
 
         let inflated_length = r.read_u32::<LittleEndian>()?;
@@ -521,7 +539,7 @@ impl CompressionHeader {
                 chunks
             }
             Err(ref e) if e.kind() == io::ErrorKind::UnexpectedEof => vec![],
-            Err(e) => return Err(e),
+            Err(e) => return Err(HpkError::Io(e)),
         };
 
         Ok(CompressionHeader {
@@ -532,7 +550,7 @@ impl CompressionHeader {
         })
     }
 
-    pub fn write(inflated_length: u32, offsets: Vec<u32>, out: &mut Write) -> io::Result<u64> {
+    pub fn write(inflated_length: u32, offsets: Vec<u32>, out: &mut Write) -> HpkResult<u64> {
         const CHUNK_SIZE: u32 = 32768;
         const HDR_SIZE: u32 = 12;
 
@@ -550,18 +568,18 @@ impl CompressionHeader {
     }
 }
 
-pub fn copy<W>(r: &mut FragmentedReader<&File>, w: &mut W) -> io::Result<u64>
+pub fn copy<W>(r: &mut FragmentedReader<&File>, w: &mut W) -> HpkResult<u64>
 where
     W: Write,
 {
     match get_compression(r) {
         Compression::Lz4 => decompress::<compression::Lz4Block>(r.len(), r, w),
         Compression::Zlib => decompress::<compression::Zlib>(r.len(), r, w),
-        Compression::None => io::copy(r, w),
+        Compression::None => io::copy(r, w).map_err(|e| HpkError::Io(e)),
     }
 }
 
-pub fn create<P, W>(dir: P, w: &mut W) -> io::Result<()>
+pub fn create<P, W>(dir: P, w: &mut W) -> HpkResult<()>
 where
     P: AsRef<Path>,
     W: Write + Seek,
@@ -642,7 +660,7 @@ where
     return Ok(());
 
     // write_file {{{
-    fn write_file<W>(file: &Path, w: &mut W) -> io::Result<Fragment>
+    fn write_file<W>(file: &Path, w: &mut W) -> HpkResult<Fragment>
     where
         W: Write + Seek,
     {
