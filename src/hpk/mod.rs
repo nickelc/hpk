@@ -18,7 +18,7 @@ use std::ffi::OsStr;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-mod compression;
+pub mod compression;
 mod walk;
 
 pub use self::walk::walk;
@@ -398,7 +398,7 @@ pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
 /// if no data is written at all the hpk compression header is written without any chunks
 /// it's the same behaviour as in a DLC file for Tropico 4
 ///
-fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> HpkResult<u64> {
+pub fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> HpkResult<u64> {
     const CHUNK_SIZE: u64 = 32768;
     let mut inflated_length = 0;
     let mut output_buffer = vec![];
