@@ -26,6 +26,9 @@ pub fn execute(matches: &ArgMatches) {
     let mut walk = hpk::walk(input).unwrap();
 
     println!("reading file: {}", walk.path().display());
+    if walk.is_compressed() {
+        println!("file is compressed");
+    }
     println!("header:");
     println!("  data_offset: 0x{:X}", walk.header().data_offset);
     println!("  fragments_residual_offset: 0x{:X}", walk.header().fragments_residual_offset);

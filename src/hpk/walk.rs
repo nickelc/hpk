@@ -5,6 +5,8 @@ use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 
+use tempdir;
+
 use super::*;
 
 macro_rules! itry {
@@ -18,7 +20,23 @@ macro_rules! itry {
 
 pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
     let file = file.as_ref().to_path_buf();
-    let mut f = File::open(&file)?;
+    let (mut f, _tempdir) = {
+        let mut f = File::open(&file)?;
+
+        if get_compression(&mut f).is_compressed() {
+            let tempdir = tempdir::TempDir::new("hpk")?;
+            let tmpfile = tempdir.path().join(file.file_name().unwrap());
+
+            let fragment = Fragment::new(0, f.metadata()?.len());
+            let mut r = FragmentedReader::new(&f, vec![fragment]);
+            let mut out = File::create(&tmpfile)?;
+            copy(&mut r, &mut out)?;
+
+            (File::open(tmpfile)?, Some(tempdir))
+        } else {
+            (f, None)
+        }
+    };
 
     let hdr = Header::read_from(&mut f)?;
     let mut fragments_data = Cursor::new(vec![0; hdr.fragmented_filesystem_length as usize]);
@@ -45,6 +63,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
     Ok(HpkIter {
         file,
         f,
+        compressed: _tempdir.is_some(),
         header: hdr,
         start: Some(DirEntry::new_root()),
         fragments,
@@ -56,6 +75,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
 pub struct HpkIter {
     file: PathBuf,
     f: File,
+    compressed: bool,
     header: Header,
     start: Option<DirEntry>,
     pub fragments: Vec<Vec<Fragment>>,
@@ -95,6 +115,10 @@ impl HpkIter {
 
     pub fn path(&self) -> &Path {
         &self.file
+    }
+
+    pub fn is_compressed(&self) -> bool {
+        self.compressed
     }
 
     pub fn header(&self) -> &Header {

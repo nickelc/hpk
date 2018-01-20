@@ -3,6 +3,7 @@ extern crate flate2;
 #[cfg(feature = "lz4frame")]
 extern crate lz4;
 extern crate lz4_compress;
+extern crate tempdir;
 extern crate walkdir;
 
 use std::cmp;
