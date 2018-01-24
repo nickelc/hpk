@@ -125,16 +125,17 @@ impl HpkIter {
         &self.header
     }
 
-    pub fn read_file<F>(&self, entry: &DirEntry, op: F)
+    pub fn read_file<F>(&self, entry: &DirEntry, op: F) -> HpkResult<()>
     where
-        F: FnOnce(FragmentedReader<&File>) -> (),
+        F: FnOnce(FragmentedReader<&File>) -> HpkResult<()>,
     {
         if !entry.is_dir() {
             let fragments = &self.fragments[entry.index()];
             let fragments: Vec<_> = fragments.iter().cloned().collect();
             let r = FragmentedReader::new(&self.f, fragments);
-            op(r);
+            op(r)?;
         }
+        Ok(())
     }
 
     fn handle_entry(&mut self, dent: DirEntry) -> Option<HpkResult<DirEntry>> {

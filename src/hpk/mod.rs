@@ -569,6 +569,33 @@ impl CompressionHeader {
     }
 }
 
+pub fn extract<P>(file: P, dest: P) -> HpkResult<()>
+where
+    P: AsRef<Path>,
+{
+    let file = file.as_ref();
+    let dest = dest.as_ref();
+    let mut walk = walk(file)?;
+
+    while let Some(entry) = walk.next() {
+        if let Ok(entry) = entry {
+            let path = dest.join(entry.path());
+            if entry.is_dir() {
+                if !path.exists() {
+                    ::std::fs::create_dir(path)?;
+                }
+            } else {
+                walk.read_file(&entry, |mut r| {
+                    let mut out = File::create(path)?;
+                    copy(&mut r, &mut out)?;
+                    Ok(())
+                })?;
+            }
+        }
+    }
+    Ok(())
+}
+
 pub fn copy<W>(r: &mut FragmentedReader<&File>, w: &mut W) -> HpkResult<u64>
 where
     W: Write,

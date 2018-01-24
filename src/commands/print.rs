@@ -87,6 +87,7 @@ pub fn execute(matches: &ArgMatches) {
             } else {
                 println!(" compressed: no");
             }
-        });
+            Ok(())
+        }).unwrap();
     }
 }

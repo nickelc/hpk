@@ -64,7 +64,8 @@ pub fn execute(matches: &ArgMatches) {
                     }
                     let mut out = File::create(out).unwrap();
                     hpk::copy(&mut r, &mut out).unwrap();
-                });
+                    Ok(())
+                }).unwrap();
             }
         }
     }

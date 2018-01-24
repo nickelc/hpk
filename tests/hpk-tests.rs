@@ -43,7 +43,8 @@ fn create_extract_and_compress() {
         if !dent.is_dir() {
             walk.read_file(&dent, |mut r| {
                 io::copy(&mut r, &mut io::sink()).unwrap();
-            });
+                Ok(())
+            }).unwrap();
         }
     }
 
@@ -60,7 +61,8 @@ fn create_extract_and_compress() {
         if !dent.is_dir() {
             walk.read_file(&dent, |mut r| {
                 io::copy(&mut r, &mut io::sink()).unwrap();
-            });
+                Ok(())
+            }).unwrap();
         }
     }
 }
