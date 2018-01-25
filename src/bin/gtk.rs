@@ -5,6 +5,9 @@ extern crate hpk;
 use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
+use std::sync::mpsc::{channel, Receiver, Sender};
+use std::thread;
+use std::time::Duration;
 
 use gio::prelude::*;
 use gtk::prelude::*;
@@ -33,11 +36,26 @@ macro_rules! get_widget {
 }
 
 #[derive(Clone)]
+enum Action {
+    Extract {
+        src_file: PathBuf,
+        dest_dir: PathBuf,
+    },
+    Create {
+        src_dir: PathBuf,
+        dest_file: PathBuf,
+    },
+    ExtractionCompleted(PathBuf),
+    CreationCompleted(PathBuf),
+}
+
 struct App {
     app: gtk::Application,
     window: gtk::ApplicationWindow,
-    extract_widget: ExtractWidget,
-    create_widget: CreateWidget,
+    _extract_widget: ExtractWidget,
+    _create_widget: CreateWidget,
+    receiver: Receiver<Action>,
+    sender: Sender<Action>,
 }
 
 #[derive(Clone)]
@@ -72,7 +90,12 @@ impl CreateWidget {
 }
 
 impl App {
-    fn new(app: &gtk::Application, builder: &gtk::Builder) -> App {
+    fn new() -> App {
+        let application = gtk::Application::new("org.hpk", gio::ApplicationFlags::empty())
+            .expect("Initialization failed...");
+
+        let builder = gtk::Builder::new_from_string(include_str!("hpk.ui"));
+
         let extract_widget = ExtractWidget {
             src_file: get_widget!(builder, "src_file"),
             dest_dir: get_widget!(builder, "dest_dir"),
@@ -85,9 +108,10 @@ impl App {
             action: gio::SimpleAction::new("create", None),
         };
         let window: gtk::ApplicationWindow = get_widget!(builder, "window");
-        app.add_window(&window);
         window.add_action(&extract_widget.action);
         window.add_action(&create_widget.action);
+
+        let (sender, receiver) = channel();
 
         // setup: FileFilters {{{
         let all_filter = gtk::FileFilter::new();
@@ -127,8 +151,6 @@ impl App {
         // }}}
 
         // setup: ExtractWidget {{{
-        extract_widget.action.set_enabled(false);
-
         extract_widget.src_file.connect_file_set(
             clone!(extract_widget => move |_| {
                 match extract_widget.get_data() {
@@ -145,11 +167,21 @@ impl App {
                 }
             }),
         );
+        extract_widget.action.connect_activate(
+            clone!(extract_widget, sender => move |_, _| {
+                match extract_widget.get_data() {
+                    (Some(file), Some(dir)) => {
+                        sender.send(Action::Extract { src_file: file, dest_dir: dir })
+                            .expect("Couldn't send data to the channel");
+                    },
+                    _ => {},
+                }
+            }),
+        );
+        extract_widget.action.set_enabled(false);
         // }}}
 
         // setup: CreateWidget {{{
-        create_widget.action.set_enabled(false);
-
         create_widget.src_dir.connect_file_set(
             clone!(create_widget => move |_| {
                 match create_widget.get_data() {
@@ -180,120 +212,155 @@ impl App {
                 }
             }),
         );
+        create_widget.action.connect_activate(
+            clone!(create_widget, sender => move |_, _| {
+                match create_widget.get_data() {
+                    (Some(src_dir), Some(location), Some(filename)) => {
+                        if let Some(name) = PathBuf::from(filename).file_name() {
+                            let dest_file = location.join(name);
+                            sender.send(Action::Create { src_dir, dest_file })
+                                .expect("Couldn't send data to the channel");
+                        }
+                    },
+                    _ => {},
+                }
+            }),
+        );
+        create_widget.action.set_enabled(false);
         // }}}
 
         App {
-            app: app.clone(),
+            app: application,
             window,
-            extract_widget,
-            create_widget,
+            _extract_widget: extract_widget,
+            _create_widget: create_widget,
+            receiver,
+            sender,
         }
     }
 
-    fn new_dialog(
-        &self,
-        title: &str,
-        buttons: &[(&str, i32)],
-        default_response: i32,
-    ) -> gtk::MessageDialog {
-        let dialog = gtk::MessageDialog::new(
-            Some(&self.window),
-            gtk::DialogFlags::MODAL,
-            gtk::MessageType::Other,
-            gtk::ButtonsType::None,
-            title,
-        );
-        for btn in buttons {
-            dialog.add_button(btn.0, btn.1);
-        }
-        dialog.set_default_response(default_response);
+    fn run(self) {
+        let app = self.app;
+        let window = self.window;
+        app.connect_activate(|_| {});
+        app.connect_startup(clone!(app, window => move |_| {
+            app.add_window(&window);
+            window.connect_delete_event(clone!(app => move |_, _| {
+                app.quit();
+                Inhibit(false)
+            }));
 
-        dialog
-    }
+            window.show_all();
+            window.activate();
+        }));
 
-    fn show_folder<P: AsRef<Path>>(&self, dir: P) {
-        let file = gio::File::new_for_path(dir);
-        gtk::show_uri(
-            self.window.get_screen().as_ref(),
-            &file.get_uri().unwrap(),
-            0,
-        ).expect("Failed to show folder");
+        let quit_action = gio::SimpleAction::new("quit", None);
+        quit_action.connect_activate(clone!(app => move |_, _| {
+            app.quit();
+        }));
+        app.add_action(&quit_action);
+
+        let sender = self.sender;
+        let receiver = self.receiver;
+        gtk::idle_add(move || {
+            match receiver.recv_timeout(Duration::from_millis(100)) {
+                Ok(Action::Extract { src_file, dest_dir }) => {
+                    extract(sender.clone(), src_file, dest_dir);
+                }
+                Ok(Action::Create { src_dir, dest_file }) => {
+                    create(sender.clone(), src_dir, dest_file);
+                }
+                Ok(Action::ExtractionCompleted(dest_dir)) => {
+                    open_extraction_completed_dialog(&window, dest_dir);
+                }
+                Ok(Action::CreationCompleted(dest_file)) => {
+                    open_created_successfully_dialog(&window, dest_file);
+                }
+                Err(_) => {}
+            }
+            Continue(true)
+        });
+
+        ApplicationExtManual::run(&app, &[]);
     }
 }
 
-fn build_ui(app: &gtk::Application) {
-    let builder = gtk::Builder::new_from_string(include_str!("hpk.ui"));
+fn extract(sender: Sender<Action>, src_file: PathBuf, dest_dir: PathBuf) {
+    thread::spawn(move || {
+        hpk::extract(&src_file, &dest_dir).unwrap();
 
-    let app = App::new(&app, &builder);
-
-    app.extract_widget.action.connect_activate(
-        clone!(app => move|_,_| {
-            match app.extract_widget.get_data() {
-                (Some(file), Some(dir)) => {
-                    hpk::extract(file, dir.clone()).unwrap();
-                    let dialog = app.new_dialog(
-                        "Extraction completted successfully",
-                        &[("Close", 0), ("Show the File", 1)],
-                        0,
-                    );
-                    if dialog.run() == 1 {
-                        app.show_folder(dir);
-                    }
-                    dialog.close();
-                },
-                _ => {},
-            }
-        }),
-    );
-
-    // Create
-    app.create_widget.action.connect_activate(
-        clone!(app => move |_,_| {
-            match app.create_widget.get_data() {
-                (Some(src_dir), Some(location), Some(filename)) => {
-                    if let Some(name) = PathBuf::from(filename).file_name() {
-                        let dest_file = location.join(name);
-                        let mut file = File::create(dest_file).unwrap();
-                        hpk::create(src_dir, &mut file).unwrap();
-                        let dialog = app.new_dialog(
-                            &format!("{:?} created successfully", name),
-                            &[("Close", 0), ("Show Location", 1)],
-                            0,
-                        );
-                        if dialog.run() == 1 {
-                            app.show_folder(location);
-                        }
-                        dialog.close();
-                    }
-                },
-                _ => {},
-            }
-        }),
-    );
-
-    app.window.connect_delete_event(|w, _| {
-        w.destroy();
-        Inhibit(false)
+        sender.send(Action::ExtractionCompleted(dest_dir)).expect(
+            "Couldn't send data to the channel",
+        );
     });
+}
 
-    app.window.show_all();
-    app.window.activate();
+fn create(sender: Sender<Action>, src_dir: PathBuf, dest_file: PathBuf) {
+    thread::spawn(move || {
+        let mut file = File::create(&dest_file).unwrap();
+        hpk::create(src_dir, &mut file).unwrap();
+
+        sender.send(Action::CreationCompleted(dest_file)).expect(
+            "Couldn't send data to the channel",
+        );
+    });
+}
+
+fn open_extraction_completed_dialog(window: &gtk::ApplicationWindow, dest_dir: PathBuf) {
+    let dialog = new_dialog(
+        window,
+        "Extraction completted successfully",
+        &[("Close", 0), ("Show the Files", 1)],
+        0,
+    );
+    if dialog.run() == 1 {
+        show_folder(window, dest_dir);
+    }
+    dialog.close();
+}
+
+fn open_created_successfully_dialog(window: &gtk::ApplicationWindow, dest_file: PathBuf) {
+    let dialog = new_dialog(
+        window,
+        &format!("{:?} created successfully", dest_file.file_name().unwrap()),
+        &[("Close", 0), ("Show Location", 1)],
+        0,
+    );
+    if dialog.run() == 1 {
+        show_folder(window, dest_file.parent().unwrap());
+    }
+    dialog.close();
+}
+
+fn new_dialog(
+    window: &gtk::ApplicationWindow,
+    title: &str,
+    buttons: &[(&str, i32)],
+    default_response: i32,
+) -> gtk::MessageDialog {
+    let dialog = gtk::MessageDialog::new(
+        Some(window),
+        gtk::DialogFlags::MODAL,
+        gtk::MessageType::Other,
+        gtk::ButtonsType::None,
+        title,
+    );
+    for btn in buttons {
+        dialog.add_button(btn.0, btn.1);
+    }
+    dialog.set_default_response(default_response);
+
+    dialog
+}
+
+fn show_folder<P: AsRef<Path>>(window: &gtk::ApplicationWindow, dir: P) {
+    let file = gio::File::new_for_path(dir);
+    gtk::show_uri(window.get_screen().as_ref(), &file.get_uri().unwrap(), 0)
+        .expect("Failed to show folder");
 }
 
 fn main() {
-    let application = gtk::Application::new("org.hpk", gio::ApplicationFlags::empty())
-        .expect("Initialization failed...");
-
-    application.connect_activate(|_| {});
-    application.connect_startup(move |app| build_ui(&app));
-
-    let quit_action = gio::SimpleAction::new("quit", None);
-    quit_action.connect_activate(clone!(application => move |_, _| {
-        application.quit();
-    }));
-    application.add_action(&quit_action);
-
-    ApplicationExtManual::run(&application, &[]);
+    App::new().run();
 }
 
 // vim: fdm=marker
