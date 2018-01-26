@@ -260,20 +260,26 @@ impl App {
         }));
         app.add_action(&quit_action);
 
+        let dialog = new_progress_dialog(&window);
+
         let sender = self.sender;
         let receiver = self.receiver;
         gtk::idle_add(move || {
             match receiver.recv_timeout(Duration::from_millis(100)) {
                 Ok(Action::Extract { src_file, dest_dir }) => {
+                    dialog.present();
                     extract(sender.clone(), src_file, dest_dir);
                 }
                 Ok(Action::Create { src_dir, dest_file }) => {
+                    dialog.present();
                     create(sender.clone(), src_dir, dest_file);
                 }
                 Ok(Action::ExtractionCompleted(dest_dir)) => {
+                    dialog.hide();
                     open_extraction_completed_dialog(&window, dest_dir);
                 }
                 Ok(Action::CreationCompleted(dest_file)) => {
+                    dialog.hide();
                     open_created_successfully_dialog(&window, dest_file);
                 }
                 Err(_) => {}
@@ -349,6 +355,29 @@ fn new_dialog(
         dialog.add_button(btn.0, btn.1);
     }
     dialog.set_default_response(default_response);
+
+    dialog
+}
+
+fn new_progress_dialog(parent: &gtk::ApplicationWindow) -> gtk::MessageDialog {
+    let dialog = gtk::MessageDialog::new(
+        Some(parent),
+        gtk::DialogFlags::all(),
+        gtk::MessageType::Other,
+        gtk::ButtonsType::None,
+        "Please wait...",
+    );
+    dialog.connect_delete_event(|_, _| Inhibit(true));
+
+    let spinner = gtk::Spinner::new();
+    spinner.set_visible(true);
+    spinner.start();
+    let container = dialog
+        .get_message_area()
+        .unwrap()
+        .downcast::<gtk::Container>()
+        .unwrap();
+    container.add(&spinner);
 
     dialog
 }
