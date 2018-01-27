@@ -1,6 +1,7 @@
 extern crate gio;
 extern crate gtk;
 extern crate hpk;
+extern crate open;
 
 use std::fs::File;
 use std::path::Path;
@@ -320,7 +321,7 @@ fn open_extraction_completed_dialog(window: &gtk::ApplicationWindow, dest_dir: P
         0,
     );
     if dialog.run() == 1 {
-        show_folder(window, dest_dir);
+        show_folder(dest_dir);
     }
     dialog.close();
 }
@@ -333,7 +334,7 @@ fn open_created_successfully_dialog(window: &gtk::ApplicationWindow, dest_file: 
         0,
     );
     if dialog.run() == 1 {
-        show_folder(window, dest_file.parent().unwrap());
+        show_folder(dest_file.parent().unwrap());
     }
     dialog.close();
 }
@@ -382,10 +383,9 @@ fn new_progress_dialog(parent: &gtk::ApplicationWindow) -> gtk::MessageDialog {
     dialog
 }
 
-fn show_folder<P: AsRef<Path>>(window: &gtk::ApplicationWindow, dir: P) {
+fn show_folder<P: AsRef<Path>>(dir: P) {
     let file = gio::File::new_for_path(dir);
-    gtk::show_uri(window.get_screen().as_ref(), &file.get_uri().unwrap(), 0)
-        .expect("Failed to show folder");
+    open::that(&file.get_uri().unwrap()).expect("Failed to show folder");
 }
 
 fn main() {
