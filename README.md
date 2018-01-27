@@ -102,31 +102,31 @@ dir:  index=1 depth=0 ""
  fragment: 0x13D1 len: 136
 file: index=2 depth=1 "entities.lst"
  fragment: 0x24 len: 3876
- compressed: inflated_length=30917 chunk_size=32768 chunks=1
+ compressed: ZLIB inflated_length=30917 chunk_size=32768 chunks=1
   chunks: 0x10     len: 3860
 file: index=3 depth=1 "fallback.lst"
  fragment: 0xF48 len: 278
- compressed: inflated_length=2956 chunk_size=32768 chunks=1
+ compressed: ZLIB inflated_length=2956 chunk_size=32768 chunks=1
   chunks: 0x10     len: 262
 file: index=4 depth=1 "fx.lst"
  fragment: 0x105E len: 82
- compressed: inflated_length=290 chunk_size=32768 chunks=1
+ compressed: ZLIB inflated_length=290 chunk_size=32768 chunks=1
   chunks: 0x10     len: 66
 file: index=5 depth=1 "misc.lst"
  fragment: 0x10B0 len: 134
- compressed: inflated_length=344 chunk_size=32768 chunks=1
+ compressed: ZLIB inflated_length=344 chunk_size=32768 chunks=1
   chunks: 0x10     len: 118
 file: index=6 depth=1 "sky.lst"
  fragment: 0x1136 len: 140
- compressed: inflated_length=536 chunk_size=32768 chunks=1
+ compressed: ZLIB inflated_length=536 chunk_size=32768 chunks=1
   chunks: 0x10     len: 124
 file: index=7 depth=1 "terrains.lst"
  fragment: 0x11C2 len: 304
- compressed: inflated_length=2268 chunk_size=32768 chunks=1
+ compressed: ZLIB inflated_length=2268 chunk_size=32768 chunks=1
   chunks: 0x10     len: 288
 file: index=8 depth=1 "water.lst"
  fragment: 0x12F2 len: 223
- compressed: inflated_length=1978 chunk_size=32768 chunks=1
+ compressed: ZLIB inflated_length=1978 chunk_size=32768 chunks=1
   chunks: 0x10     len: 207
 ```
 
@@ -156,22 +156,24 @@ file: index=8 depth=1 "water.lst"
 | 0      | 4    | Offset of a fragment in bytes             |
 | 4      | 4    | Size of a fragment in bytes               |
 
-### Fragment Type: Dir
+### Filesystem Entry: Directory
 
 | Offset | Size | Value                                     |
 |--------|------|-------------------------------------------|
 | 0      | 4    | Fragment Index; Index starts with `1`     |
-| 4      | 4    | Fragment Type; File=`0x0` Dir=`0x1`       |
+| 4      | 4    | Entry Type; File=`0x0` Dir=`0x1`          |
 | 8      | 2    | Size of the following name in bytes       |
 | 10     | ?    | Name data                                 |
 
-### Fragment Type: File (zlib compressed)
+### Fragmented File (zlib/lz4 compressed)
 
-Offsets of compressed chunks are relative from the start of a fragment.
+Offsets of compressed chunks are relative from the start of a fragment.<br>
+Steam version of Victor Vran uses LZ4 as compression.<br>
+HPK files can be compressed like a fragmented file.
 
 | Offset | Size | Value                                         |
 |--------|------|-----------------------------------------------|
-| 0      | 4    | Magic number, `0x42494C5A` (`"ZLIB"`)         |
+| 0      | 4    | Magic number, `0x42494C5A` (`"ZLIB"`)<br>`0x20345A4C` (`"LZ4 "`)  |
 | 4      | 4    | Size of the inflated data in bytes            |
 | 8      | 4    | Inflated chunk size, `0x0800` (`32768`)       |
 | 12     | 4    | Chunk offset in bytes, `0x10` for one chunk   |
