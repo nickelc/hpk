@@ -1,0 +1,19 @@
+[package]
+name = "hpk-gtk"
+version = "0.1.0"
+description = "HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran etc.)"
+authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
+
+[dependencies]
+gio="0.3"
+open="1"
+
+[dependencies.hpk]
+path=".."
+
+[dependencies.gtk]
+features=["v3_22"]
+version="0.3"
+
+[profile.release]
+lto=true

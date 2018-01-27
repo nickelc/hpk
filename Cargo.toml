@@ -15,18 +15,12 @@ path = "src/hpk/mod.rs"
 name = "hpk"
 path = "src/main.rs"
 
-[[bin]]
-name = "hpk-gtk"
-path = "src/bin/gtk.rs"
-
 [dependencies]
 byteorder = "1"
-gio="0.3"
 flate2 = "1"
 lz4-compress="0"
 walkdir="2"
 tempdir="0.3"
-open="1"
 
 [dependencies.clap]
 default-features = false
@@ -35,10 +29,6 @@ version = "^2"
 [dependencies.lz4]
 version="1"
 optional=true
-
-[dependencies.gtk]
-features=["v3_22"]
-version="0.3"
 
 [profile.release]
 lto=true
