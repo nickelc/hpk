@@ -8,6 +8,7 @@ use std::path::PathBuf;
 use tempdir;
 
 use super::*;
+use super::read::FragmentedReader;
 
 macro_rules! itry {
     ($e:expr) => {
