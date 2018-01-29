@@ -17,7 +17,7 @@ use std::ffi::OsStr;
 
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
 
-pub mod compression;
+pub mod compress;
 mod read;
 mod walk;
 
@@ -272,7 +272,7 @@ pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
 /// if no data is written at all the hpk compression header is written without any chunks
 /// it's the same behaviour as in a DLC file for Tropico 4
 ///
-pub fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> HpkResult<u64> {
+pub fn compress<T: compress::Encoder>(r: &mut Read, w: &mut Write) -> HpkResult<u64> {
     const CHUNK_SIZE: u64 = 32768;
     let mut inflated_length = 0;
     let mut output_buffer = vec![];
@@ -303,7 +303,7 @@ pub fn compress<T: compression::Encoder>(r: &mut Read, w: &mut Write) -> HpkResu
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
 
-fn decompress<T: compression::Decoder>(length: u64, r: &mut Read, w: &mut Write) -> HpkResult<u64> {
+fn decompress<T: compress::Decoder>(length: u64, r: &mut Read, w: &mut Write) -> HpkResult<u64> {
     let hdr = CompressionHeader::read_from(length, r)?;
     let mut written = 0;
     for chunk in &hdr.chunks {
@@ -475,8 +475,8 @@ where
     W: Write,
 {
     match get_compression(r) {
-        Compression::Lz4 => decompress::<compression::Lz4Block>(r.len(), r, w),
-        Compression::Zlib => decompress::<compression::Zlib>(r.len(), r, w),
+        Compression::Lz4 => decompress::<compress::Lz4Block>(r.len(), r, w),
+        Compression::Zlib => decompress::<compress::Zlib>(r.len(), r, w),
         Compression::None => io::copy(r, w).map_err(|e| HpkError::Io(e)),
     }
 }
@@ -576,7 +576,7 @@ where
             let mut file = File::open(file)?;
             let position = w.seek(SeekFrom::Current(0))?;
 
-            let n = compress::<compression::Zlib>(&mut file, w)?;
+            let n = compress::<compress::Zlib>(&mut file, w)?;
 
             Ok(Fragment::new(position, n))
 

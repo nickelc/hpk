@@ -51,7 +51,7 @@ fn create_extract_and_compress() {
     {
         let mut file = fs::File::open("test1.hpk").unwrap();
         let mut out = fs::File::create("test1-compressed.hpk").unwrap();
-        hpk::compress::<hpk::compression::Zlib>(&mut file, &mut out).unwrap();
+        hpk::compress::<hpk::compress::Zlib>(&mut file, &mut out).unwrap();
     }
 
     let mut walk = hpk::walk("test1-compressed.hpk").unwrap();
