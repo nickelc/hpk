@@ -17,6 +17,7 @@ path = "src/main.rs"
 
 [dependencies]
 byteorder = "1"
+filetime = "0.1"
 flate2 = "1"
 lz4-compress="0"
 walkdir="2"

@@ -1,4 +1,5 @@
 extern crate byteorder;
+extern crate filetime;
 extern crate flate2;
 #[cfg(feature = "lz4frame")]
 extern crate lz4;
@@ -26,6 +27,12 @@ pub use self::walk::walk;
 
 const HPK_SIG: [u8; 4] = *b"BPUL";
 const HEADER_LENGTH: u8 = 36;
+
+/// The Windows epoch starts 1601-01-01T00:00:00Z. It's SEC_TO_UNIX_EPOCH seconds
+/// before the Unix epoch 1970-01-01T00:00:00Z.
+///
+const SEC_TO_UNIX_EPOCH: i64 = 11644473600;
+const WINDOWS_TICKS: i64 = 10_000_000;
 
 type HpkResult<T> = Result<T, HpkError>;
 
@@ -482,18 +489,61 @@ where
 }
 
 // struct CreateOptions {{{
+enum FileDateFormat {
+    Default,
+    Short,
+}
+
 pub struct CreateOptions {
+    filedates_fmt: Option<FileDateFormat>,
 }
 
 impl CreateOptions {
     pub fn new() -> Self {
-        Self { }
+        Self { filedates_fmt: None }
     }
 
     pub fn with_default_filedates_format(&mut self) {
+        self.filedates_fmt = Some(FileDateFormat::Default);
     }
 
     pub fn with_short_filedates_format(&mut self) {
+        self.filedates_fmt = Some(FileDateFormat::Short);
+    }
+
+    fn with_filedates(&self) -> bool {
+        self.filedates_fmt.is_some()
+    }
+
+    /// Calculates the file time for the _filedates file
+    ///
+    /// The actually values for Tropico 3 and Grand Ages: Rome are stored
+    /// as Windows file times (default format) and for Tropico 4 and Omerta
+    /// the values are the Windows file times divided by 2000 (short format).
+    ///
+    /// Tropico 5 and Victor Vran don't seem to use it anymore.
+    ///
+    fn filedates_value_for_path<P: AsRef<Path>>(&self, path: P) -> HpkResult<i64> {
+        use filetime::FileTime;
+
+        let ft = FileTime::from_last_modification_time(&path.as_ref().metadata()?);
+        let filetime = ft.seconds() as i64;
+
+        match self.filedates_fmt {
+            Some(ref fmt) => {
+                // Convert the platform dependent file time to Windows file time
+                #[cfg(unix)]
+                let val = (filetime + SEC_TO_UNIX_EPOCH) * WINDOWS_TICKS;
+                #[cfg(windows)]
+                let val = filetime;
+
+                match fmt {
+                    &FileDateFormat::Default => Ok(val),
+                    &FileDateFormat::Short => Ok(val / 2000),
+                }
+            }
+            None => Ok(filetime),
+        }
     }
 }
 // }}}
@@ -527,9 +577,17 @@ where
     let mut stack = HashMap::new();
 
     w.seek(SeekFrom::Start(HEADER_LENGTH as u64))?;
+    let mut filedates = vec![];
 
     for entry in walkdir {
         let entry = entry?;
+
+        // write filedate entry
+        if options.with_filedates() && entry.depth() > 0 {
+            let val = options.filedates_value_for_path(entry.path())?;
+            let (path, _) = strip_prefix!(dir entry.path());
+            writeln!(filedates, "{}={}", path.display(), val)?;
+        }
 
         if entry.file_type().is_file() {
             let (path, parent) = strip_prefix!(file entry.path());
@@ -542,7 +600,19 @@ where
 
         } else if entry.file_type().is_dir() {
             let (path, parent) = strip_prefix!(dir entry.path());
-            let dir_buffer = stack.remove(&path.to_path_buf()).unwrap_or_else(Vec::new);
+            let mut dir_buffer = stack.remove(&path.to_path_buf()).unwrap_or_else(Vec::new);
+
+            // write _filedates in the root dir buffer
+            if options.with_filedates() && entry.depth() == 0 {
+                let mut buf = Cursor::new(&filedates);
+                let position = w.seek(SeekFrom::Current(0))?;
+                let n = io::copy(&mut buf, w)?;
+
+                fragments.push(Fragment::new(position, n));
+                let index = fragments.len() + 1;
+                let dent = DirEntry::new_file("_filedates", index, 1);
+                dent.write(&mut dir_buffer)?;
+            }
 
             let position = w.seek(SeekFrom::Current(0))?;
             let mut r = Cursor::new(dir_buffer);
