@@ -481,6 +481,7 @@ where
     let file = file.as_ref();
     let dest = dest.as_ref();
     let mut walk = walk(file)?;
+    let _filedates = Path::new("_filedates");
 
     while let Some(entry) = walk.next() {
         if let Ok(entry) = entry {
@@ -494,10 +495,50 @@ where
                     if options.verbose {
                         println!("{}", path.display());
                     }
-                    let mut out = File::create(path)?;
-                    copy(&mut r, &mut out)?;
-                    Ok(())
+                    if !options.skip_filedates && entry.depth() == 1 &&
+                        entry.path().eq(_filedates)
+                    {
+                        process_filedates(dest, &mut r)
+                    } else {
+                        let mut out = File::create(path)?;
+                        copy(&mut r, &mut out)?;
+                        Ok(())
+                    }
                 })?;
+            }
+        }
+    }
+    Ok(())
+}
+
+fn process_filedates<P: AsRef<Path>>(dest: P, r: &mut FragmentedReader<&File>) -> HpkResult<()> {
+    let br = io::BufReader::new(r);
+    for line in br.lines() {
+        let line = line?;
+        let entry: Vec<_> = line.rsplitn(2, '=').collect();
+        if let Ok(val) = entry[0].parse::<i64>() {
+            // This catches the different file time formats.
+            // Multiplication overflows for the Windows file time
+            let val = match val.checked_mul(2000) {
+                Some(val) => val,
+                None => val,
+            };
+            let unix_secs = (val / WINDOWS_TICKS) - SEC_TO_UNIX_EPOCH;
+            let ft = filetime::FileTime::from_seconds_since_1970(unix_secs as u64, 0);
+
+            let path = dest.as_ref().join(entry[1]);
+            if path.exists() {
+                filetime::set_file_times(path, ft, ft)?;
+            } else {
+                // Remove the first component of the path and try again because
+                // Grand Ages: Rome adds the basename of the original hpk file to the path
+                let mut comps = Path::new(entry[1]).components();
+                comps.next();
+
+                let path = dest.as_ref().join(comps.as_path());
+                if path.exists() {
+                    filetime::set_file_times(path, ft, ft)?;
+                }
             }
         }
     }
