@@ -33,7 +33,8 @@ fn create_extract_and_compress() {
 
     {
         let mut out = fs::File::create("test1.hpk").unwrap();
-        hpk::create("test1", &mut out).unwrap();
+        let options = hpk::CreateOptions::new();
+        hpk::create(options, "test1", &mut out).unwrap();
     }
 
     let mut walk = hpk::walk("test1.hpk").unwrap();

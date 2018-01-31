@@ -481,7 +481,24 @@ where
     }
 }
 
-pub fn create<P, W>(dir: P, w: &mut W) -> HpkResult<()>
+// struct CreateOptions {{{
+pub struct CreateOptions {
+}
+
+impl CreateOptions {
+    pub fn new() -> Self {
+        Self { }
+    }
+
+    pub fn with_default_filedates_format(&mut self) {
+    }
+
+    pub fn with_short_filedates_format(&mut self) {
+    }
+}
+// }}}
+
+pub fn create<P, W>(options: CreateOptions, dir: P, w: &mut W) -> HpkResult<()>
 where
     P: AsRef<Path>,
     W: Write + Seek,

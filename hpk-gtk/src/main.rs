@@ -304,8 +304,9 @@ fn extract(sender: Sender<Action>, src_file: PathBuf, dest_dir: PathBuf) {
 
 fn create(sender: Sender<Action>, src_dir: PathBuf, dest_file: PathBuf) {
     thread::spawn(move || {
+        let options = hpk::CreateOptions::new();
         let mut file = File::create(&dest_file).unwrap();
-        hpk::create(src_dir, &mut file).unwrap();
+        hpk::create(options, src_dir, &mut file).unwrap();
 
         sender.send(Action::CreationCompleted(dest_file)).expect(
             "Couldn't send data to the channel",
