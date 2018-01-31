@@ -294,7 +294,8 @@ impl App {
 
 fn extract(sender: Sender<Action>, src_file: PathBuf, dest_dir: PathBuf) {
     thread::spawn(move || {
-        hpk::extract(&src_file, &dest_dir).unwrap();
+        let options = hpk::ExtractOptions::new();
+        hpk::extract(options, &src_file, &dest_dir).unwrap();
 
         sender.send(Action::ExtractionCompleted(dest_dir)).expect(
             "Couldn't send data to the channel",
