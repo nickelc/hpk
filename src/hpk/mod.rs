@@ -450,7 +450,31 @@ impl CompressionHeader {
     }
 }
 
-pub fn extract<P>(file: P, dest: P) -> HpkResult<()>
+// struct ExtractOptions {{{
+pub struct ExtractOptions {
+    skip_filedates: bool,
+    verbose: bool,
+}
+
+impl ExtractOptions {
+    pub fn new() -> Self {
+        Self {
+            skip_filedates: false,
+            verbose: false,
+        }
+    }
+
+    pub fn skip_filedates(&mut self) {
+        self.skip_filedates = true;
+    }
+
+    pub fn set_verbose(&mut self, verbose: bool) {
+        self.verbose = verbose;
+    }
+}
+// }}}
+
+pub fn extract<P>(options: ExtractOptions, file: P, dest: P) -> HpkResult<()>
 where
     P: AsRef<Path>,
 {
@@ -467,6 +491,9 @@ where
                 }
             } else {
                 walk.read_file(&entry, |mut r| {
+                    if options.verbose {
+                        println!("{}", path.display());
+                    }
                     let mut out = File::create(path)?;
                     copy(&mut r, &mut out)?;
                     Ok(())

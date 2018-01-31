@@ -1,5 +1,4 @@
 use std::fs;
-use std::fs::File;
 use std::path::PathBuf;
 use std::process;
 
@@ -30,13 +29,15 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
                 .validator(validate_input))
         .arg(Arg::from_usage("<dest> 'destination folder'")
                 .validator(validate_dest))
+        .arg(Arg::from_usage("[filedates] --ignore-filedates")
+                .help("Skip processing of a _filedates file and just extract it"))
         .arg(Arg::from_usage("[force] --force 'Force extraction if destination folder is not empty'"))
         .arg(Arg::from_usage("[verbose] -v 'Verbosely list files processed'"))
 }
 
 pub fn execute(matches: &ArgMatches) {
-    let input = value_t!(matches, "file", String).unwrap();
-    let dest = value_t!(matches, "dest", String).map(|d| PathBuf::from(d)).unwrap();
+    let input = value_t!(matches, "file", String).map(PathBuf::from).unwrap();
+    let dest = value_t!(matches, "dest", String).map(PathBuf::from).unwrap();
     let force = matches.is_present("force");
     let verbose = matches.is_present("verbose");
 
@@ -47,26 +48,10 @@ pub fn execute(matches: &ArgMatches) {
         }
     }
 
-    let mut walk = hpk::walk(input).unwrap();
-
-    while let Some(entry) = walk.next() {
-        if let Ok(entry) = entry {
-            if entry.is_dir() {
-                let path = dest.join(entry.path());
-                if !path.exists() {
-                    fs::create_dir(path).unwrap();
-                }
-            } else {
-                walk.read_file(&entry, |mut r| {
-                    let out = dest.join(entry.path());
-                    if verbose {
-                        println!("{}", out.display());
-                    }
-                    let mut out = File::create(out).unwrap();
-                    hpk::copy(&mut r, &mut out).unwrap();
-                    Ok(())
-                }).unwrap();
-            }
-        }
+    let mut options = hpk::ExtractOptions::new();
+    options.set_verbose(verbose);
+    if matches.is_present("filedates") {
+        options.skip_filedates();
     }
+    hpk::extract(options, input, dest).unwrap();
 }
