@@ -46,11 +46,19 @@ hpk-create
 Create a new hpk archive
 
 USAGE:
-    hpk create <dir> <file>
+    hpk create [FLAGS] [OPTIONS] <dir> <file>
 
 FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+        --with-filedates    Stores the last modification times in a _filedates file
+    -h, --help              Prints help information
+    -V, --version           Prints version information
+
+OPTIONS:
+        --filedate-fmt <FORMAT>
+            Specifies the format of the stored filedates.
+
+            default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
+            short: 'Windows file time / 2000' used by Tropico 4 and Omerta
 
 ARGS:
     <dir>     input directory
@@ -67,10 +75,11 @@ USAGE:
     hpk extract [FLAGS] <file> <dest>
 
 FLAGS:
-        --force      Force extraction if destination folder is not empty
-    -h, --help       Prints help information
-    -V, --version    Prints version information
-    -v               Verbosely list files processed
+        --ignore-filedates    Skip processing of a _filedates file and just extract it
+        --force               Force extraction if destination folder is not empty
+    -h, --help                Prints help information
+    -V, --version             Prints version information
+    -v                        Verbosely list files processed
 
 ARGS:
     <file>    hpk archive
@@ -179,3 +188,18 @@ HPK files can be compressed like a fragmented file.
 | 12     | 4    | Chunk offset in bytes, `0x10` for one chunk   |
 | *      | 4    | Additional chunk offsets (optional)           |
 
+### `_filedates` File
+HPK files can contain a `_filedates` file with the last modification times of the files and directories.<br>
+Each line consists of a path and a file time, separated by equals signs.
+```
+path/to/file=value
+path/to/folder=value
+```
+Path is the basic path to the file but for Grand Ages: Rome the actual path is prefixed by<br>
+the basename of the original HPK file (Shaders.hpk `"Shaders/Shaders/VertexAnim.fx"`).<br>
+Value is either the Windows file time (`"default"`) or the Windows file time divided by 2000 (`"short"`).
+
+| Format  | Games                       |
+|---------|-----------------------------|
+| default | Grand Ages: Rome, Tropico 3 |
+| short   | Tropico 4, Omerta           |
