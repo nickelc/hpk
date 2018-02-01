@@ -512,6 +512,18 @@ where
 }
 
 fn process_filedates<P: AsRef<Path>>(dest: P, r: &mut FragmentedReader<&File>) -> HpkResult<()> {
+    // macro: is_valid {{{
+    macro_rules! is_valid {
+        ($e:expr) => {{
+            #[cfg(unix)]
+            let valid = $e.exists();
+            #[cfg(windows)]
+            let valid = $e.exists() && $e.metadata()?.is_file();
+            valid
+        }}
+    }
+    // }}}
+
     let br = io::BufReader::new(r);
     for line in br.lines() {
         let line = line?;
@@ -527,7 +539,7 @@ fn process_filedates<P: AsRef<Path>>(dest: P, r: &mut FragmentedReader<&File>) -
             let ft = filetime::FileTime::from_seconds_since_1970(unix_secs as u64, 0);
 
             let path = dest.as_ref().join(entry[1]);
-            if path.exists() {
+            if is_valid!(path) {
                 filetime::set_file_times(path, ft, ft)?;
             } else {
                 // Remove the first component of the path and try again because
@@ -536,7 +548,7 @@ fn process_filedates<P: AsRef<Path>>(dest: P, r: &mut FragmentedReader<&File>) -
                 comps.next();
 
                 let path = dest.as_ref().join(comps.as_path());
-                if path.exists() {
+                if is_valid!(path) {
                     filetime::set_file_times(path, ft, ft)?;
                 }
             }
