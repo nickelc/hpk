@@ -575,12 +575,20 @@ enum FileDateFormat {
 }
 
 pub struct CreateOptions {
+    compress: bool,
     filedates_fmt: Option<FileDateFormat>,
 }
 
 impl CreateOptions {
     pub fn new() -> Self {
-        Self { filedates_fmt: None }
+        Self {
+            compress: false,
+            filedates_fmt: None,
+        }
+    }
+
+    pub fn compress(&mut self) {
+        self.compress = true;
     }
 
     pub fn with_default_filedates_format(&mut self) {
