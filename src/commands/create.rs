@@ -32,6 +32,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name("create")
         .about("Create a new hpk archive")
         .display_order(0)
+        .arg(Arg::from_usage("[compress] --compress 'Compress the whole hpk file'"))
         .arg(Arg::from_usage(
             "[filedates] --with-filedates 'Stores the last modification times in a _filedates file'",
         ))
@@ -53,6 +54,9 @@ pub fn execute(matches: &ArgMatches) {
     let file = value_t!(matches, "file", String).unwrap();
 
     let mut options = hpk::CreateOptions::new();
+    if matches.is_present("compress") {
+        options.compress();
+    }
     if let Ok(fmt) = value_t!(matches, "filedate-fmt", FileDateFormat) {
         match fmt {
             FileDateFormat::default => options.with_default_filedates_format(),

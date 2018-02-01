@@ -49,6 +49,7 @@ USAGE:
     hpk create [FLAGS] [OPTIONS] <dir> <file>
 
 FLAGS:
+        --compress          Compress the whole hpk file
         --with-filedates    Stores the last modification times in a _filedates file
     -h, --help              Prints help information
     -V, --version           Prints version information
