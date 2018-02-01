@@ -604,25 +604,16 @@ impl CreateOptions {
     /// Tropico 5 and Victor Vran don't seem to use it anymore.
     ///
     fn filedates_value_for_path<P: AsRef<Path>>(&self, path: P) -> HpkResult<i64> {
-        use filetime::FileTime;
-
-        let ft = FileTime::from_last_modification_time(&path.as_ref().metadata()?);
+        let ft = filetime::FileTime::from_last_modification_time(&path.as_ref().metadata()?);
         let filetime = ft.seconds() as i64;
 
-        match self.filedates_fmt {
-            Some(ref fmt) => {
-                // Convert the platform dependent file time to Windows file time
-                #[cfg(unix)]
-                let val = (filetime + SEC_TO_UNIX_EPOCH) * WINDOWS_TICKS;
-                #[cfg(windows)]
-                let val = filetime;
+        // Convert the platform dependent file time to Windows file time
+        #[cfg(unix)]
+        let filetime = (filetime + SEC_TO_UNIX_EPOCH) * WINDOWS_TICKS;
 
-                match fmt {
-                    &FileDateFormat::Default => Ok(val),
-                    &FileDateFormat::Short => Ok(val / 2000),
-                }
-            }
-            None => Ok(filetime),
+        match self.filedates_fmt {
+            Some(FileDateFormat::Short) => Ok(filetime / 2000),
+            _ => Ok(filetime),
         }
     }
 }
