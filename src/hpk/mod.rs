@@ -696,10 +696,9 @@ where
 
             let position = w.seek(SeekFrom::Current(0))?;
             let mut r = Cursor::new(dir_buffer);
-            io::copy(&mut r, w)?;
-            let current_pos = w.seek(SeekFrom::Current(0))?;
+            let n = io::copy(&mut r, w)?;
 
-            let fragment = Fragment::new(position, current_pos - position);
+            let fragment = Fragment::new(position, n);
             if entry.depth() > 0 {
                 fragments.push(fragment);
                 let index = fragments.len() + 1;
@@ -716,14 +715,14 @@ where
         }
     }
 
-    let fragment_pos = w.seek(SeekFrom::Current(0))?;
+    let fragmented_filesystem_offset = w.seek(SeekFrom::Current(0))?;
+    let fragmented_filesystem_length = fragments.len() as u64 * 8;
     for fragment in fragments {
         fragment.write(w)?;
     }
 
-    let current_pos = w.seek(SeekFrom::Current(0))?;
     w.seek(SeekFrom::Start(0))?;
-    let header = Header::new(fragment_pos, current_pos - fragment_pos);
+    let header = Header::new(fragmented_filesystem_offset, fragmented_filesystem_length);
     header.write(w)?;
 
     return Ok(());
