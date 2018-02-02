@@ -654,7 +654,15 @@ where
     let mut fragments: Vec<Fragment> = vec![];
     let mut stack = HashMap::new();
 
-    let mut w = File::create(file)?;
+    let (mut w, tmpfile, _tmpdir) = {
+        if options.compress {
+            let tempdir = tempdir::TempDir::new("hpk")?;
+            let tmpfile = tempdir.path().join(file.as_ref().file_name().unwrap());
+            (File::create(&tmpfile)?, Some(tmpfile), Some(tempdir))
+        } else {
+            (File::create(&file)?, None, None)
+        }
+    };
 
     w.seek(SeekFrom::Start(HEADER_LENGTH as u64))?;
     let mut filedates = vec![];
@@ -724,6 +732,14 @@ where
     w.seek(SeekFrom::Start(0))?;
     let header = Header::new(fragmented_filesystem_offset, fragmented_filesystem_length);
     header.write(&mut w)?;
+
+    // Compress the temp file
+    if let Some(tmpfile) = tmpfile {
+        w.sync_data()?;
+        let mut input = File::open(tmpfile)?;
+        let mut out = File::create(file)?;
+        compress::<compress::Zlib>(&mut input, &mut out)?;
+    }
 
     return Ok(());
 
