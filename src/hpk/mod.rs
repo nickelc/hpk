@@ -627,10 +627,9 @@ impl CreateOptions {
 }
 // }}}
 
-pub fn create<P, W>(options: CreateOptions, dir: P, w: &mut W) -> HpkResult<()>
+pub fn create<P>(options: CreateOptions, dir: P, file: P) -> HpkResult<()>
 where
     P: AsRef<Path>,
-    W: Write + Seek,
 {
     use std::collections::HashMap;
     use walkdir::WalkDir;
@@ -655,6 +654,8 @@ where
     let mut fragments: Vec<Fragment> = vec![];
     let mut stack = HashMap::new();
 
+    let mut w = File::create(file)?;
+
     w.seek(SeekFrom::Start(HEADER_LENGTH as u64))?;
     let mut filedates = vec![];
 
@@ -671,7 +672,7 @@ where
         if entry.file_type().is_file() {
             let (path, parent) = strip_prefix!(file entry.path());
 
-            fragments.push(write_file(entry.path(), w)?);
+            fragments.push(write_file(entry.path(), &mut w)?);
             let index = fragments.len() + 1;
             let parent_buf = stack.entry(parent.to_path_buf()).or_insert_with(Vec::new);
             let dent = DirEntry::new_file(path, index, entry.depth());
@@ -685,7 +686,7 @@ where
             if options.with_filedates() && entry.depth() == 0 {
                 let mut buf = Cursor::new(&filedates);
                 let position = w.seek(SeekFrom::Current(0))?;
-                let n = io::copy(&mut buf, w)?;
+                let n = io::copy(&mut buf, &mut w)?;
 
                 fragments.push(Fragment::new(position, n));
                 let index = fragments.len() + 1;
@@ -695,7 +696,7 @@ where
 
             let position = w.seek(SeekFrom::Current(0))?;
             let mut r = Cursor::new(dir_buffer);
-            let n = io::copy(&mut r, w)?;
+            let n = io::copy(&mut r, &mut w)?;
 
             let fragment = Fragment::new(position, n);
             if entry.depth() > 0 {
@@ -717,12 +718,12 @@ where
     let fragmented_filesystem_offset = w.seek(SeekFrom::Current(0))?;
     let fragmented_filesystem_length = fragments.len() as u64 * 8;
     for fragment in fragments {
-        fragment.write(w)?;
+        fragment.write(&mut w)?;
     }
 
     w.seek(SeekFrom::Start(0))?;
     let header = Header::new(fragmented_filesystem_offset, fragmented_filesystem_length);
-    header.write(w)?;
+    header.write(&mut w)?;
 
     return Ok(());
 
