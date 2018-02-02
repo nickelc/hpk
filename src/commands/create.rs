@@ -18,6 +18,9 @@ const FILETIME_FMT_HELP: &str = "Specifies the format of the stored filedates.
 default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
 short: 'Windows file time / 2000' used by Tropico 4 and Omerta";
 
+const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
+default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
+
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     fn validate_dir(value: String) -> Result<(), String> {
         if let Ok(md) = fs::metadata(value) {
@@ -43,6 +46,9 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
                 .next_line_help(true)
                 .long_help(FILETIME_FMT_HELP),
         )
+        .arg(Arg::from_usage("[extensions] --extensions=<EXT>...")
+                .next_line_help(true)
+                .long_help(EXTENSIONS_HELP))
         .arg(Arg::from_usage("<dir> 'input directory'")
                 .validator(validate_dir))
         .arg(Arg::from_usage("<file> 'hpk output file'"))
@@ -61,6 +67,9 @@ pub fn execute(matches: &ArgMatches) {
             FileDateFormat::default => options.with_default_filedates_format(),
             FileDateFormat::short => options.with_short_filedates_format(),
         }
+    }
+    if let Ok(extensions) = values_t!(matches, "extensions", String) {
+        options.with_extensions(extensions);
     }
 
     hpk::create(options, input, file).unwrap();

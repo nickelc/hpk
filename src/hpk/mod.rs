@@ -576,6 +576,7 @@ enum FileDateFormat {
 
 pub struct CreateOptions {
     compress: bool,
+    extensions: Vec<String>,
     filedates_fmt: Option<FileDateFormat>,
 }
 
@@ -583,12 +584,26 @@ impl CreateOptions {
     pub fn new() -> Self {
         Self {
             compress: false,
+            extensions: vec![
+                "lst".into(),
+                "lua".into(),
+                "xml".into(),
+                "tga".into(),
+                "dds".into(),
+                "xtex".into(),
+                "bin".into(),
+                "csv".into(),
+            ],
             filedates_fmt: None,
         }
     }
 
     pub fn compress(&mut self) {
         self.compress = true;
+    }
+
+    pub fn with_extensions(&mut self, ext: Vec<String>) {
+        self.extensions = ext;
     }
 
     pub fn with_default_filedates_format(&mut self) {
@@ -680,7 +695,7 @@ where
         if entry.file_type().is_file() {
             let (path, parent) = strip_prefix!(file entry.path());
 
-            fragments.push(write_file(entry.path(), &mut w)?);
+            fragments.push(write_file(&options, entry.path(), &mut w)?);
             let index = fragments.len() + 1;
             let parent_buf = stack.entry(parent.to_path_buf()).or_insert_with(Vec::new);
             let dent = DirEntry::new_file(path, index, entry.depth());
@@ -744,14 +759,16 @@ where
     return Ok(());
 
     // write_file {{{
-    fn write_file<W>(file: &Path, w: &mut W) -> HpkResult<Fragment>
+    fn write_file<W>(options: &CreateOptions, file: &Path, w: &mut W) -> HpkResult<Fragment>
     where
         W: Write + Seek,
     {
-        let extensions = vec!["lst", "lua", "xml", "tga", "dds", "xtex", "bin", "csv"];
-
         let _compress = file.extension()
-            .map(|e| extensions.contains(&e.to_str().unwrap()))
+            .map(|e| {
+                options.extensions.contains(
+                    &e.to_str().unwrap().to_string(),
+                )
+            })
             .unwrap_or(false);
 
         if _compress {

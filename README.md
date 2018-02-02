@@ -55,6 +55,9 @@ FLAGS:
     -V, --version           Prints version information
 
 OPTIONS:
+        --extensions <EXT>...
+            Specifies the file extensions to be compressed. default: [lst,lua,xml,tga,dds,xtex,bin,csv]
+
         --filedate-fmt <FORMAT>
             Specifies the format of the stored filedates.
 
