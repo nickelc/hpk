@@ -1,5 +1,4 @@
 use std::fs;
-use std::fs::File;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
@@ -64,6 +63,5 @@ pub fn execute(matches: &ArgMatches) {
         }
     }
 
-    let mut out = File::create(file).unwrap();
-    hpk::create(options, &input, &mut out).unwrap();
+    hpk::create(options, input, file).unwrap();
 }
