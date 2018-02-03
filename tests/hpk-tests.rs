@@ -32,7 +32,7 @@ fn create_extract_and_compress() {
     create_file("test1/two_bytes", Some("AB"));
 
     {
-        let options = hpk::CreateOptions::new();
+        let options = Default::default();
         hpk::create(options, "test1", "test1.hpk").unwrap();
     }
 
@@ -51,7 +51,8 @@ fn create_extract_and_compress() {
     {
         let mut file = fs::File::open("test1.hpk").unwrap();
         let mut out = fs::File::create("test1-compressed.hpk").unwrap();
-        hpk::compress::<hpk::compress::Zlib>(&mut file, &mut out).unwrap();
+        let options = Default::default();
+        hpk::compress(&options, &mut file, &mut out).unwrap();
     }
 
     let mut walk = hpk::walk("test1-compressed.hpk").unwrap();

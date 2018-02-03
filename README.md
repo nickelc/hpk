@@ -50,11 +50,15 @@ USAGE:
 
 FLAGS:
         --compress          Compress the whole hpk file
+        --lz4               Sets LZ4 as encoder
         --with-filedates    Stores the last modification times in a _filedates file
     -h, --help              Prints help information
     -V, --version           Prints version information
 
 OPTIONS:
+        --chunk-size <SIZE>
+            Default chunk size: 32768
+
         --extensions <EXT>...
             Specifies the file extensions to be compressed. default: [lst,lua,xml,tga,dds,xtex,bin,csv]
 

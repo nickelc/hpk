@@ -22,6 +22,12 @@ const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
 default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
+    fn validate_chunk_size(value: String) -> Result<(), String> {
+        match value.parse::<u32>() {
+            Ok(_) => Ok(()),
+            Err(_) => Err(String::from("Invalid value for chunk size")),
+        }
+    }
     fn validate_dir(value: String) -> Result<(), String> {
         if let Ok(md) = fs::metadata(value) {
             if md.is_dir() {
@@ -34,7 +40,17 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name("create")
         .about("Create a new hpk archive")
         .display_order(0)
-        .arg(Arg::from_usage("[compress] --compress 'Compress the whole hpk file'"))
+        .arg(
+            Arg::from_usage("[compress] --compress 'Compress the whole hpk file'")
+                .display_order(0)
+        )
+        .arg(
+            Arg::from_usage("[lz4] --lz4 'Sets LZ4 as encoder'")
+                .display_order(10)
+        )
+        .arg(Arg::from_usage("[chunk_size] --chunk-size <SIZE> 'Default chunk size: 32768'")
+                .next_line_help(true)
+                .validator(validate_chunk_size))
         .arg(Arg::from_usage(
             "[filedates] --with-filedates 'Stores the last modification times in a _filedates file'",
         ))
@@ -61,6 +77,12 @@ pub fn execute(matches: &ArgMatches) {
     let mut options = hpk::CreateOptions::new();
     if matches.is_present("compress") {
         options.compress();
+    }
+    if matches.is_present("lz4") {
+        options.use_lz4();
+    }
+    if let Ok(chunk_size) = value_t!(matches, "chunk_size", u32) {
+        options.with_chunk_size(chunk_size);
     }
     if let Ok(fmt) = value_t!(matches, "filedate-fmt", FileDateFormat) {
         match fmt {

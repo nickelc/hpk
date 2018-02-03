@@ -274,20 +274,21 @@ pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
     compression
 }
 
-/// Compresses the data using the encoder used
+/// Compresses the data with the encoder used
 ///
 /// if no data is written at all the hpk compression header is written without any chunks
 /// it's the same behaviour as in a DLC file for Tropico 4
 ///
-pub fn compress<T: compress::Encoder>(r: &mut Read, w: &mut Write) -> HpkResult<u64> {
-    const CHUNK_SIZE: u64 = 32768;
+pub fn compress(options: &CompressOptions, r: &mut Read, w: &mut Write) -> HpkResult<u64> {
+    use compress::Encoder;
+
     let mut inflated_length = 0;
     let mut output_buffer = vec![];
     let mut offsets = vec![];
 
     loop {
         let mut chunk = vec![];
-        let mut t = r.take(CHUNK_SIZE);
+        let mut t = r.take(options.chunk_size as u64);
 
         inflated_length += match io::copy(&mut t, &mut chunk) {
             Ok(0) => {
@@ -302,10 +303,14 @@ pub fn compress<T: compress::Encoder>(r: &mut Read, w: &mut Write) -> HpkResult<
         offsets.push(position);
 
         let mut chunk = Cursor::new(chunk);
-        T::encode_chunk(&mut chunk, &mut output_buffer)?;
+        match options.compressor {
+            Compression::Zlib => compress::Zlib::encode_chunk(&mut chunk, &mut output_buffer)?,
+            Compression::Lz4 => compress::Lz4Block::encode_chunk(&mut chunk, &mut output_buffer)?,
+            _ => unreachable!(),
+        };
     }
 
-    let header_size = CompressionHeader::write(inflated_length, offsets, w)?;
+    let header_size = CompressionHeader::write(&options, inflated_length, offsets, w)?;
 
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
@@ -325,6 +330,20 @@ fn decompress<T: compress::Decoder>(length: u64, r: &mut Read, w: &mut Write) ->
         };
     }
     Ok(written)
+}
+
+pub struct CompressOptions {
+    chunk_size: u32,
+    compressor: Compression,
+}
+
+impl Default for CompressOptions {
+    fn default() -> Self {
+        Self {
+            chunk_size: 32768,
+            compressor: Compression::Zlib,
+        }
+    }
 }
 
 #[derive(PartialEq)]
@@ -432,13 +451,17 @@ impl CompressionHeader {
         })
     }
 
-    pub fn write(inflated_length: u32, offsets: Vec<u32>, out: &mut Write) -> HpkResult<u64> {
-        const CHUNK_SIZE: u32 = 32768;
+    pub fn write(
+        options: &CompressOptions,
+        inflated_length: u32,
+        offsets: Vec<u32>,
+        out: &mut Write,
+    ) -> HpkResult<u64> {
         const HDR_SIZE: u32 = 12;
 
-        Compression::Zlib.write_identifier(out)?;
+        options.compressor.write_identifier(out)?;
         out.write_u32::<LittleEndian>(inflated_length)?;
-        out.write_u32::<LittleEndian>(CHUNK_SIZE)?;
+        out.write_u32::<LittleEndian>(options.chunk_size)?;
 
         let offsets_size = offsets.len() as u32 * 4;
         let offsets = offsets.iter().map(|x| HDR_SIZE + offsets_size + x);
@@ -576,14 +599,16 @@ enum FileDateFormat {
 
 pub struct CreateOptions {
     compress: bool,
+    compress_options: CompressOptions,
     extensions: Vec<String>,
     filedates_fmt: Option<FileDateFormat>,
 }
 
-impl CreateOptions {
-    pub fn new() -> Self {
+impl Default for CreateOptions {
+    fn default() -> Self {
         Self {
             compress: false,
+            compress_options: Default::default(),
             extensions: vec![
                 "lst".into(),
                 "lua".into(),
@@ -597,9 +622,23 @@ impl CreateOptions {
             filedates_fmt: None,
         }
     }
+}
+
+impl CreateOptions {
+    pub fn new() -> Self {
+        CreateOptions::default()
+    }
 
     pub fn compress(&mut self) {
         self.compress = true;
+    }
+
+    pub fn use_lz4(&mut self) {
+        self.compress_options.compressor = Compression::Lz4;
+    }
+
+    pub fn with_chunk_size(&mut self, chunk_size: u32) {
+        self.compress_options.chunk_size = chunk_size;
     }
 
     pub fn with_extensions(&mut self, ext: Vec<String>) {
@@ -753,7 +792,7 @@ where
         w.sync_data()?;
         let mut input = File::open(tmpfile)?;
         let mut out = File::create(file)?;
-        compress::<compress::Zlib>(&mut input, &mut out)?;
+        compress(&options.compress_options, &mut input, &mut out)?;
     }
 
     return Ok(());
@@ -774,8 +813,7 @@ where
         if _compress {
             let mut file = File::open(file)?;
             let position = w.seek(SeekFrom::Current(0))?;
-
-            let n = compress::<compress::Zlib>(&mut file, w)?;
+            let n = compress(&options.compress_options, &mut file, w)?;
 
             Ok(Fragment::new(position, n))
 
