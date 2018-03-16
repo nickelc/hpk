@@ -4,6 +4,7 @@ Supported games:
 * Omerta: City of Gangsters
 * Grand Ages: Rome
 * Victor Vran
+* Surviving Mars
 
 ## Usage
 
@@ -185,8 +186,8 @@ file: index=8 depth=1 "water.lst"
 ### Fragmented File (zlib/lz4 compressed)
 
 Offsets of compressed chunks are relative from the start of a fragment.<br>
-Steam version of Victor Vran uses LZ4 as compression.<br>
-HPK files can be compressed like a fragmented file.
+Victor Vran (Steam version) and Surviving Mars use LZ4 as compression.<br>
+The challenge hpks of Tropico 5 are compressed like a fragmented file.
 
 | Offset | Size | Value                                         |
 |--------|------|-----------------------------------------------|
