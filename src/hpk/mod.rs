@@ -16,7 +16,7 @@ use std::str;
 use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
-use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
+use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 pub mod compress;
 mod read;
@@ -93,27 +93,27 @@ impl Header {
         }
         Ok(Header {
             _identifier: sig,
-            data_offset: r.read_u32::<LittleEndian>()?,
-            fragments_per_file: r.read_u32::<LittleEndian>()?,
-            _unknown2: r.read_u32::<LittleEndian>()?,
-            fragments_residual_offset: r.read_u32::<LittleEndian>()? as u64,
-            fragments_residual_count: r.read_u32::<LittleEndian>()? as u64,
-            _unknown5: r.read_u32::<LittleEndian>()?,
-            fragmented_filesystem_offset: r.read_u32::<LittleEndian>()? as u64,
-            fragmented_filesystem_length: r.read_u32::<LittleEndian>()? as u64,
+            data_offset: r.read_u32::<LE>()?,
+            fragments_per_file: r.read_u32::<LE>()?,
+            _unknown2: r.read_u32::<LE>()?,
+            fragments_residual_offset: r.read_u32::<LE>()? as u64,
+            fragments_residual_count: r.read_u32::<LE>()? as u64,
+            _unknown5: r.read_u32::<LE>()?,
+            fragmented_filesystem_offset: r.read_u32::<LE>()? as u64,
+            fragmented_filesystem_length: r.read_u32::<LE>()? as u64,
         })
     }
 
     pub fn write(&self, w: &mut Write) -> HpkResult<()> {
         w.write(&self._identifier)?;
-        w.write_u32::<LittleEndian>(self.data_offset)?;
-        w.write_u32::<LittleEndian>(self.fragments_per_file)?;
-        w.write_u32::<LittleEndian>(self._unknown2)?;
-        w.write_u32::<LittleEndian>(self.fragments_residual_offset as u32)?;
-        w.write_u32::<LittleEndian>(self.fragments_residual_count as u32)?;
-        w.write_u32::<LittleEndian>(self._unknown5)?;
-        w.write_u32::<LittleEndian>(self.fragmented_filesystem_offset as u32)?;
-        w.write_u32::<LittleEndian>(self.fragmented_filesystem_length as u32)?;
+        w.write_u32::<LE>(self.data_offset)?;
+        w.write_u32::<LE>(self.fragments_per_file)?;
+        w.write_u32::<LE>(self._unknown2)?;
+        w.write_u32::<LE>(self.fragments_residual_offset as u32)?;
+        w.write_u32::<LE>(self.fragments_residual_count as u32)?;
+        w.write_u32::<LE>(self._unknown5)?;
+        w.write_u32::<LE>(self.fragmented_filesystem_offset as u32)?;
+        w.write_u32::<LE>(self.fragmented_filesystem_length as u32)?;
 
         Ok(())
     }
@@ -133,8 +133,8 @@ pub struct Fragment {
 impl Fragment {
 
     pub fn read_from<T: Read>(mut r: T) -> HpkResult<Fragment> {
-        let offset = u64::from(r.read_u32::<LittleEndian>()?);
-        let length = u64::from(r.read_u32::<LittleEndian>()?);
+        let offset = u64::from(r.read_u32::<LE>()?);
+        let length = u64::from(r.read_u32::<LE>()?);
         Ok(Fragment { offset, length })
     }
 
@@ -151,8 +151,8 @@ impl Fragment {
     }
 
     pub fn write(&self, w: &mut Write) -> HpkResult<()> {
-        w.write_u32::<LittleEndian>(self.offset as u32)?;
-        w.write_u32::<LittleEndian>(self.length as u32)?;
+        w.write_u32::<LE>(self.offset as u32)?;
+        w.write_u32::<LE>(self.length as u32)?;
 
         Ok(())
     }
@@ -225,17 +225,17 @@ impl DirEntry {
     }
 
     fn read_from<T: Read>(parent: &Path, depth: usize, mut r: T) -> HpkResult<DirEntry> {
-        let fragment_index = r.read_u32::<LittleEndian>()?.checked_sub(1).ok_or(
+        let fragment_index = r.read_u32::<LE>()?.checked_sub(1).ok_or(
             HpkError::InvalidFragmentIndex,
         )?;
 
-        let ft = r.read_u32::<LittleEndian>().map(|t| if t == 0 {
+        let ft = r.read_u32::<LE>().map(|t| if t == 0 {
             FileType::File(fragment_index as usize)
         } else {
             FileType::Dir(fragment_index as usize)
         })?;
 
-        let name_length = r.read_u16::<LittleEndian>()?;
+        let name_length = r.read_u16::<LE>()?;
         let mut buf = vec![0; name_length as usize];
         r.read_exact(&mut buf)?;
         let name = str::from_utf8(&buf).map_err(
@@ -254,10 +254,10 @@ impl DirEntry {
             FileType::Dir(index) => (index, 1),
             FileType::File(index) => (index, 0),
         };
-        w.write_u32::<LittleEndian>(index as u32)?;
-        w.write_u32::<LittleEndian>(_type)?;
+        w.write_u32::<LE>(index as u32)?;
+        w.write_u32::<LE>(_type)?;
         let name = self.path.file_name().unwrap().to_str().unwrap();
-        w.write_u16::<LittleEndian>(name.len() as u16)?;
+        w.write_u16::<LE>(name.len() as u16)?;
         w.write(name.as_bytes())?;
         Ok(())
     }
@@ -412,14 +412,14 @@ impl CompressionHeader {
     pub fn read_from<T: Read + ?Sized>(length: u64, r: &mut T) -> HpkResult<CompressionHeader> {
         let compressor = Compression::read_from(r)?;
 
-        let inflated_length = r.read_u32::<LittleEndian>()?;
-        let chunk_size = r.read_u32::<LittleEndian>()?;
-        let chunks = match r.read_u32::<LittleEndian>() {
+        let inflated_length = r.read_u32::<LE>()?;
+        let chunk_size = r.read_u32::<LE>()?;
+        let chunks = match r.read_u32::<LE>() {
             Ok(val) => {
                 let mut offsets = vec![val as u64];
                 if offsets[0] != 16 {
                     for _ in 0..((offsets[0] - 16) / 4) {
-                        offsets.push(r.read_u32::<LittleEndian>()? as u64);
+                        offsets.push(r.read_u32::<LE>()? as u64);
                     }
                 }
                 let mut chunks = vec![
@@ -460,13 +460,13 @@ impl CompressionHeader {
         const HDR_SIZE: u32 = 12;
 
         options.compressor.write_identifier(out)?;
-        out.write_u32::<LittleEndian>(inflated_length)?;
-        out.write_u32::<LittleEndian>(options.chunk_size)?;
+        out.write_u32::<LE>(inflated_length)?;
+        out.write_u32::<LE>(options.chunk_size)?;
 
         let offsets_size = offsets.len() as u32 * 4;
         let offsets = offsets.iter().map(|x| HDR_SIZE + offsets_size + x);
         for offset in offsets {
-            out.write_u32::<LittleEndian>(offset)?;
+            out.write_u32::<LE>(offset)?;
         }
 
         Ok((HDR_SIZE + offsets_size) as u64)
