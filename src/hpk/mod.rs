@@ -810,20 +810,15 @@ where
             })
             .unwrap_or(false);
 
-        if _compress {
-            let mut file = File::open(file)?;
-            let position = w.seek(SeekFrom::Current(0))?;
-            let n = compress(&options.compress_options, &mut file, w)?;
-
-            Ok(Fragment::new(position, n))
-
+        let mut fin = File::open(file)?;
+        let position = w.seek(SeekFrom::Current(0))?;
+        let n = if _compress {
+            compress(&options.compress_options, &mut fin, w)?
         } else {
-            let position = w.seek(SeekFrom::Current(0))?;
-            let mut input = File::open(file)?;
-            let n = io::copy(&mut input, w)?;
+            io::copy(&mut fin, w)?
+        };
 
-            Ok(Fragment::new(position, n))
-        }
+        Ok(Fragment::new(position, n))
     }
     // }}}
 }
