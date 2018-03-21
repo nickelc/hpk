@@ -75,7 +75,7 @@ ARGS:
 ```
 
 ### hpk extract
-```bash
+```text
 $ hg extract -h
 hpk-extract
 Extract files from a hpk archive
@@ -85,6 +85,7 @@ USAGE:
 
 FLAGS:
         --ignore-filedates    Skip processing of a _filedates file and just extract it
+        --fix-lua-files       Fix the bytecode header of Surviving Mars' Lua files
         --force               Force extraction if destination folder is not empty
     -h, --help                Prints help information
     -V, --version             Prints version information
