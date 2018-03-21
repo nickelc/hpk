@@ -476,6 +476,7 @@ impl CompressionHeader {
 // struct ExtractOptions {{{
 pub struct ExtractOptions {
     skip_filedates: bool,
+    fix_lua_files: bool,
     verbose: bool,
 }
 
@@ -483,12 +484,17 @@ impl ExtractOptions {
     pub fn new() -> Self {
         Self {
             skip_filedates: false,
+            fix_lua_files: false,
             verbose: false,
         }
     }
 
     pub fn skip_filedates(&mut self) {
         self.skip_filedates = true;
+    }
+
+    pub fn fix_lua_files(&mut self) {
+        self.fix_lua_files = true;
     }
 
     pub fn set_verbose(&mut self, verbose: bool) {

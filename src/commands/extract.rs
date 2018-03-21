@@ -31,6 +31,8 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
                 .validator(validate_dest))
         .arg(Arg::from_usage("[filedates] --ignore-filedates")
                 .help("Skip processing of a _filedates file and just extract it"))
+        .arg(Arg::from_usage("[fix_lua] --fix-lua-files")
+                .help("Fix the bytecode header of Surviving Mars' Lua files"))
         .arg(Arg::from_usage("[force] --force 'Force extraction if destination folder is not empty'"))
         .arg(Arg::from_usage("[verbose] -v 'Verbosely list files processed'"))
 }
@@ -52,6 +54,9 @@ pub fn execute(matches: &ArgMatches) {
     options.set_verbose(verbose);
     if matches.is_present("filedates") {
         options.skip_filedates();
+    }
+    if matches.is_present("fix_lua") {
+        options.fix_lua_files();
     }
     hpk::extract(options, input, dest).unwrap();
 }
