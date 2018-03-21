@@ -51,6 +51,9 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::from_usage("[chunk_size] --chunk-size <SIZE> 'Default chunk size: 32768'")
                 .next_line_help(true)
                 .validator(validate_chunk_size))
+        .arg(Arg::from_usage("[cripple_lua] --cripple-lua-files")
+                .help("Cripple bytecode header for Surviving Mars")
+        )
         .arg(Arg::from_usage(
             "[filedates] --with-filedates 'Stores the last modification times in a _filedates file'",
         ))
@@ -80,6 +83,9 @@ pub fn execute(matches: &ArgMatches) {
     }
     if matches.is_present("lz4") {
         options.use_lz4();
+    }
+    if matches.is_present("cripple_lua") {
+        options.cripple_lua_files();
     }
     if let Ok(chunk_size) = value_t!(matches, "chunk_size", u32) {
         options.with_chunk_size(chunk_size);

@@ -618,6 +618,7 @@ enum FileDateFormat {
 pub struct CreateOptions {
     compress: bool,
     compress_options: CompressOptions,
+    cripple_lua_files: bool,
     extensions: Vec<String>,
     filedates_fmt: Option<FileDateFormat>,
 }
@@ -627,6 +628,7 @@ impl Default for CreateOptions {
         Self {
             compress: false,
             compress_options: Default::default(),
+            cripple_lua_files: false,
             extensions: vec![
                 "lst".into(),
                 "lua".into(),
@@ -653,6 +655,10 @@ impl CreateOptions {
 
     pub fn use_lz4(&mut self) {
         self.compress_options.compressor = Compression::Lz4;
+    }
+
+    pub fn cripple_lua_files(&mut self) {
+        self.cripple_lua_files = true;
     }
 
     pub fn with_chunk_size(&mut self, chunk_size: u32) {
