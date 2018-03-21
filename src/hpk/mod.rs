@@ -4,6 +4,8 @@ extern crate flate2;
 #[cfg(feature = "lz4frame")]
 extern crate lz4;
 extern crate lz4_compress;
+#[macro_use]
+extern crate nom;
 extern crate tempdir;
 extern crate walkdir;
 
@@ -19,6 +21,7 @@ use std::ffi::OsStr;
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 
 pub mod compress;
+mod lua;
 mod read;
 mod walk;
 
