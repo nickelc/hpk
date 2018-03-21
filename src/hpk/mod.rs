@@ -532,8 +532,17 @@ where
                     {
                         process_filedates(dest, &mut r)
                     } else {
-                        let mut out = File::create(path)?;
-                        copy(&mut r, &mut out)?;
+                        let ext = path.extension()
+                            .and_then(|s| s.to_str())
+                            .map_or("".to_string(), |s| s.to_ascii_lowercase());
+
+                        if options.fix_lua_files && &ext[..] == "lua" {
+                            let out = File::create(path)?;
+                            copy(&mut r, &mut lua::fix_header(out))?;
+                        } else {
+                            let mut out = File::create(path)?;
+                            copy(&mut r, &mut out)?;
+                        }
                         Ok(())
                     }
                 })?;
