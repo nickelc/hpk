@@ -1,7 +1,14 @@
 use std::io::prelude::*;
 use std::io;
-use byteorder::{WriteBytesExt, LE};
 
+#[cfg_attr(rustfmt, rustfmt_skip)]
+const LUA_VALID_HEADER: [u8; 33] = [
+    0x1B, 0x4C, 0x75, 0x61, 0x53, 0x00,
+    0x19, 0x93, 0x0D, 0x0A, 0x1A, 0x0A,
+    0x04, 0x04, 0x04, 0x08, 0x08,
+    0x78, 0x56, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x00, 0x00, 0x00, 0x00, 0x00, 0x28, 0x77, 0x40,
+];
 #[cfg_attr(rustfmt, rustfmt_skip)]
 const LUA_INVALID_HEADER: [u8; 31] = [
     0x1B, 0x4C, 0x75, 0x61, 0x53, 0x00,
@@ -12,7 +19,6 @@ const LUA_INVALID_HEADER: [u8; 31] = [
 ];
 const LUA_SIG: &'static [u8] = b"\x1BLua";
 const LUA_VERSION53_FMT: &'static [u8] = b"\x53\x00";
-const LUAC_SIZEOF: &'static [u8] = b"\x04\x04\x04\x08\x08";
 const LUAC_DATA: &'static [u8] = b"\x19\x93\r\n\x1A\n";
 const LUAC_INT: u64 = 0x5678;
 const LUAC_NUM: f64 = 370.5;
@@ -143,14 +149,7 @@ fn write_with_valid_header<W: Write>(w: &mut W, buf: &[u8]) -> io::Result<usize>
     match parser::check_invalid_header(buf) {
         Ok((remaining, ())) => {
             let mut n = 0;
-            n += w.write(LUA_SIG)?;
-            n += w.write(LUA_VERSION53_FMT)?;
-            n += w.write(LUAC_DATA)?;
-            n += w.write(LUAC_SIZEOF)? - 2; // ignore the two added bytes
-            w.write_u64::<LE>(LUAC_INT)?;
-            w.write_f64::<LE>(LUAC_NUM)?;
-            n += ::std::mem::size_of::<u64>();
-            n += ::std::mem::size_of::<f64>();
+            n += w.write(&LUA_VALID_HEADER)? - 2; // ignore the two additional bytes
             n += w.write(remaining)?;
             Ok(n)
         }
