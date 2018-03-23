@@ -156,3 +156,59 @@ fn write_with_valid_header<W: Write>(w: &mut W, buf: &[u8]) -> io::Result<usize>
         Err(_) => w.write(buf),
     }
 }
+
+// Tests {{{
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn check_valid_header_parser() {
+        assert_eq!(
+            parser::check_valid_header(&LUA_VALID_HEADER),
+            Ok((&b""[..], ()))
+        );
+    }
+
+    #[test]
+    fn check_invalid_header_parser() {
+        assert_eq!(
+            parser::check_invalid_header(&LUA_INVALID_HEADER),
+            Ok((&b""[..], ()))
+        );
+    }
+
+    #[test]
+    fn header_rewrite() {
+        let mut input = io::Cursor::new(vec![]);
+        let mut buf = io::Cursor::new(vec![]);
+        input.write(&LUA_VALID_HEADER).unwrap();
+        input.write(&[0xCA, 0xFE, 0xCA, 0xFE]).unwrap();
+        input.set_position(0);
+
+        {
+            let mut wrapper = cripple_header(&mut input);
+            let n = io::copy(&mut wrapper, &mut buf).unwrap();
+            assert_eq!(n, LUA_INVALID_HEADER.len() as u64 + 4);
+        }
+        assert_eq!(buf.get_ref().len(), LUA_INVALID_HEADER.len() + 4);
+        assert_eq!(buf.get_ref()[0..31], LUA_INVALID_HEADER);
+
+        let mut output = io::Cursor::new(vec![]);
+        buf.set_position(0);
+
+        {
+            let mut wrapper = fix_header(&mut output);
+            let n = io::copy(&mut buf, &mut wrapper).unwrap();
+
+            // LuaHeaderRewriter has to lie here about the written bytes
+            assert_eq!(n, LUA_INVALID_HEADER.len() as u64 + 4);
+        }
+        assert_eq!(output.position(), LUA_VALID_HEADER.len() as u64 + 4);
+
+        assert_eq!(input.into_inner(), output.into_inner());
+    }
+}
+// }}}
+
+// vim: fdm=marker
