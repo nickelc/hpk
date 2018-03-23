@@ -1,10 +1,27 @@
 # HPK Archiver for Haemimont Engine game files
-Supported games:
+## Supported games
 * Tropico 3-5
 * Omerta: City of Gangsters
 * Grand Ages: Rome
 * Victor Vran
 * Surviving Mars
+
+## Game Scripting
+Haeminont uses [Lua](https://www.lua.org/) for scripting their games.
+The scripts contain only the compiled Lua bytecode and have to be decompiled
+with [unluac](https://sourceforge.net/projects/unluac/)
+or [luadec](https://github.com/viruscamp/luadec) to get the source code.
+With Surviving Mars they switched from Lua `5.1` to `5.3` but the bytecode
+headers are missing two bytes to make it possible to decompile the scripts.
+
+|        | Surviving Mars' Lua Bytecode Header                     |
+|--------|---------------------------------------------------------|
+| Broken | `1B4C 7561 5300 1993 0D0A 1A0A 0404 ____ 0878 5600 ...` |
+| Valid  | `1B4C 7561 5300 1993 0D0A 1A0A 0404 0408 0878 5600 ...` |
+
+Use `hpk extract --fix-lua-files ...` to fix the scripts on extraction.<br>
+Use `hpk create --cripple-lua-files ...` to change the bytecode header of the compiled lua scripts on repacking.
+The game can also load plain Lua files instead of a compiled version if you run into any problems.
 
 ## Usage
 
