@@ -826,20 +826,26 @@ where
     where
         W: Write + Seek,
     {
-        let _compress = file.extension()
-            .map(|e| {
-                options.extensions.contains(
-                    &e.to_str().unwrap().to_string(),
-                )
-            })
-            .unwrap_or(false);
+        let ext = file.extension()
+            .and_then(|s| s.to_str())
+            .map_or("".to_string(), |s| s.to_ascii_lowercase());
+        let _compress = options.extensions.contains(&ext);
 
         let mut fin = File::open(file)?;
         let position = w.seek(SeekFrom::Current(0))?;
-        let n = if _compress {
-            compress(&options.compress_options, &mut fin, w)?
+        let n = if options.cripple_lua_files && &ext[..] == "lua" {
+            let mut r = lua::cripple_header(&mut fin);
+            if _compress {
+                compress(&options.compress_options, &mut r, w)?
+            } else {
+                io::copy(&mut r, w)?
+            }
         } else {
-            io::copy(&mut fin, w)?
+            if _compress {
+                compress(&options.compress_options, &mut fin, w)?
+            } else {
+                io::copy(&mut fin, w)?
+            }
         };
 
         Ok(Fragment::new(position, n))
