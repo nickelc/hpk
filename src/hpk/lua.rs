@@ -59,7 +59,7 @@ mod parser {
 }
 
 pub struct LuaHeaderRewriter<T, F> {
-    inner: Option<T>,
+    inner: T,
     done: bool,
     func: F,
 }
@@ -67,9 +67,9 @@ pub struct LuaHeaderRewriter<T, F> {
 impl<T, F> LuaHeaderRewriter<T, F> {
     fn new(inner: T, func: F) -> Self {
         Self {
-            inner: Some(inner),
+            inner,
             done: false,
-            func: func,
+            func,
         }
     }
 }
@@ -81,11 +81,11 @@ where
 {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
         if !self.done {
-            let res = (self.func)(self.inner.as_mut().unwrap(), buf);
+            let res = (self.func)(&mut self.inner, buf);
             self.done = true;
             res
         } else {
-            self.inner.as_mut().unwrap().read(buf)
+            self.inner.read(buf)
         }
     }
 }
@@ -97,16 +97,16 @@ where
 {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
         if !self.done {
-            let res = (self.func)(self.inner.as_mut().unwrap(), buf);
+            let res = (self.func)(&mut self.inner, buf);
             self.done = true;
             res
         } else {
-            self.inner.as_mut().unwrap().write(buf)
+            self.inner.write(buf)
         }
     }
 
     fn flush(&mut self) -> io::Result<()> {
-        self.inner.as_mut().unwrap().flush()
+        self.inner.flush()
     }
 }
 
