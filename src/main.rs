@@ -11,6 +11,8 @@ use clap::{App, AppSettings};
 
 fn main() {
     let matches = App::new("hpk")
+        .version(crate_version!())
+        .about(crate_description!())
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(commands::create::clap())
         .subcommand(commands::extract::clap())
