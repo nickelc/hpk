@@ -515,6 +515,10 @@ where
     let mut walk = walk(file)?;
     let _filedates = Path::new("_filedates");
 
+    if !dest.exists() {
+        ::std::fs::create_dir(dest)?;
+    }
+
     while let Some(entry) = walk.next() {
         if let Ok(entry) = entry {
             let path = dest.join(entry.path());

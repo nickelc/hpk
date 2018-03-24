@@ -16,9 +16,9 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         Err(String::from("Not a valid file"))
     }
     fn validate_dest(value: String) -> Result<(), String> {
-        match fs::read_dir(value) {
-            Ok(_) => Ok(()),
-            Err(_) => Err(String::from("Not a valid directory")),
+        match fs::metadata(value) {
+            Ok(ref md) if md.is_file() => Err(String::from("Not a valid directory")),
+            Ok(_) | Err(_) => Ok(()),
         }
     }
 
