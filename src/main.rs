@@ -1,5 +1,3 @@
-extern crate byteorder;
-extern crate walkdir;
 #[macro_use]
 extern crate clap;
 
