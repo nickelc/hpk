@@ -5,6 +5,13 @@ use std::env;
 use std::io::prelude::*;
 use std::io;
 use std::fs;
+use std::path::Path;
+
+macro_rules! assert_path_exists {
+    ($p:expr) => {
+        assert!(Path::new($p).exists(), format!("{} does not exist", $p));
+    }
+}
 
 #[test]
 fn create_extract_and_compress() {
@@ -28,13 +35,27 @@ fn create_extract_and_compress() {
     create_file("test1/empty_compressed.lst", None);
     create_file("test1/empty_file", None);
     create_dir("test1/empty_folder");
-    create_file("test1/six_bytes", Some("ABCDEF"));
+    create_dir("test1/folder");
+    create_file("test1/folder/six_bytes", Some("ABCDEF"));
     create_file("test1/two_bytes", Some("AB"));
 
     {
         let options = Default::default();
         hpk::create(options, "test1", "test1.hpk").unwrap();
     }
+
+    {
+        let options = Default::default();
+        hpk::extract(options, "test1.hpk", "test1-extracted").expect("could not extract test1.hpk");
+    }
+
+    assert_path_exists!("test1-extracted");
+    assert_path_exists!("test1-extracted/compressed.lst");
+    assert_path_exists!("test1-extracted/empty_compressed.lst");
+    assert_path_exists!("test1-extracted/empty_file");
+    assert_path_exists!("test1-extracted/empty_folder");
+    assert_path_exists!("test1-extracted/folder/six_bytes");
+    assert_path_exists!("test1-extracted/two_bytes");
 
     let mut walk = hpk::walk("test1.hpk").unwrap();
     assert!(!walk.is_compressed());

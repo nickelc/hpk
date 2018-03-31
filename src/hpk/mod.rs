@@ -483,13 +483,19 @@ pub struct ExtractOptions {
     verbose: bool,
 }
 
-impl ExtractOptions {
-    pub fn new() -> Self {
+impl Default for ExtractOptions {
+    fn default() -> Self {
         Self {
             skip_filedates: false,
             fix_lua_files: false,
             verbose: false,
         }
+    }
+}
+
+impl ExtractOptions {
+    pub fn new() -> Self {
+        Default::default()
     }
 
     pub fn skip_filedates(&mut self) {
