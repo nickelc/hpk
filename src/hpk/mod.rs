@@ -1,6 +1,7 @@
 extern crate byteorder;
 extern crate filetime;
 extern crate flate2;
+extern crate glob;
 #[cfg(feature = "lz4frame")]
 extern crate lz4;
 extern crate lz4_compress;
@@ -19,6 +20,7 @@ use std::path::{Path, PathBuf};
 use std::ffi::OsStr;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
+use glob::Pattern;
 
 pub mod compress;
 mod lua;
@@ -478,6 +480,7 @@ impl CompressionHeader {
 
 // struct ExtractOptions {{{
 pub struct ExtractOptions {
+    paths: Vec<Pattern>,
     skip_filedates: bool,
     fix_lua_files: bool,
     verbose: bool,
@@ -486,6 +489,7 @@ pub struct ExtractOptions {
 impl Default for ExtractOptions {
     fn default() -> Self {
         Self {
+            paths: vec![],
             skip_filedates: false,
             fix_lua_files: false,
             verbose: false,
@@ -509,6 +513,22 @@ impl ExtractOptions {
     pub fn set_verbose(&mut self, verbose: bool) {
         self.verbose = verbose;
     }
+
+    pub fn set_paths(&mut self, paths: Vec<String>) {
+        self.paths = paths.iter().filter_map(|s| Pattern::new(s).ok()).collect();
+    }
+
+    fn matches(&self, path: &Path) -> bool {
+        if self.paths.is_empty() {
+            return true;
+        }
+        for pat in &self.paths {
+            if pat.matches_path(path) {
+                return true;
+            }
+        }
+        false
+    }
 }
 // }}}
 
@@ -521,18 +541,22 @@ where
     let mut walk = walk(file)?;
     let _filedates = Path::new("_filedates");
 
-    if !dest.exists() {
-        ::std::fs::create_dir(dest)?;
-    }
-
     while let Some(entry) = walk.next() {
         if let Ok(entry) = entry {
             let path = dest.join(entry.path());
+            if !options.matches(&entry.path) {
+                continue;
+            }
             if entry.is_dir() {
                 if !path.exists() {
-                    ::std::fs::create_dir(path)?;
+                    ::std::fs::create_dir_all(&path)?;
                 }
             } else {
+                if let Some(parent) = path.parent() {
+                    if !parent.exists() {
+                        ::std::fs::create_dir_all(&parent)?;
+                    }
+                }
                 walk.read_file(&entry, |mut r| {
                     if options.verbose {
                         println!("{}", path.display());

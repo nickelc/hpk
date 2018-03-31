@@ -29,6 +29,8 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
                 .validator(validate_input))
         .arg(Arg::from_usage("<dest> 'destination folder'")
                 .validator(validate_dest))
+        .arg(Arg::from_usage("[paths]...")
+                .help("An optional list of archive members to be processed, separated by spaces."))
         .arg(Arg::from_usage("[filedates] --ignore-filedates")
                 .help("Skip processing of a _filedates file and just extract it"))
         .arg(Arg::from_usage("[fix_lua] --fix-lua-files")
@@ -51,6 +53,7 @@ pub fn execute(matches: &ArgMatches) {
     }
 
     let mut options = hpk::ExtractOptions::new();
+    options.set_paths(values_t!(matches, "paths", String).unwrap_or_default());
     options.set_verbose(verbose);
     if matches.is_present("filedates") {
         options.skip_filedates();

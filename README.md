@@ -99,7 +99,7 @@ hpk-extract
 Extract files from a hpk archive
 
 USAGE:
-    hpk extract [FLAGS] <file> <dest>
+    hpk extract [FLAGS] <file> <dest> [paths]...
 
 FLAGS:
         --ignore-filedates    Skip processing of a _filedates file and just extract it
@@ -110,8 +110,9 @@ FLAGS:
     -v                        Verbosely list files processed
 
 ARGS:
-    <file>    hpk archive
-    <dest>    destination folder
+    <file>        hpk archive
+    <dest>        destination folder
+    <paths>...    An optional list of archive members to be processed, separated by spaces.
 ```
 
 ### hpk print
