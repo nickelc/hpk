@@ -19,6 +19,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .display_order(30)
         .arg(Arg::from_usage("<file> 'hpk archive'")
                 .validator(validate_input))
+        .arg(Arg::from_usage("[header] --header-only 'Print only the header informations'"))
 }
 
 pub fn execute(matches: &ArgMatches) {
@@ -37,6 +38,11 @@ pub fn execute(matches: &ArgMatches) {
     println!("  fragments_filesystem_offset: 0x{:X}", walk.header().fragmented_filesystem_offset);
     println!("  fragments_filesystem_length: {}", walk.header().fragmented_filesystem_length);
     println!("filesystem entries: {}", walk.header().filesystem_entries());
+
+    if matches.is_present("header") {
+        return;
+    }
+
     println!("filesystem fragments:");
     for chunk in &walk.fragments {
         let mut start = if walk.header().fragments_per_file == 1 {
