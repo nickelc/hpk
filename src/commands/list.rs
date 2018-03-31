@@ -1,6 +1,10 @@
+extern crate glob;
+
 use std::fs;
+use std::path::Path;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
+use self::glob::Pattern;
 
 use hpk;
 
@@ -18,14 +22,33 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .display_order(20)
         .arg(Arg::from_usage("<file> 'hpk archive'")
                 .validator(validate_input))
+        .arg(Arg::from_usage("[paths]..."))
 }
 
 pub fn execute(matches: &ArgMatches) {
     let input = value_t!(matches, "file", String).unwrap();
+    let paths = values_t!(matches, "paths", String).unwrap_or_default();
+    let paths = paths.iter().filter_map(|s| Pattern::new(s).ok()).collect();
+
     let walk = hpk::walk(input).unwrap();
+
+    fn matches_path(path: &Path, paths: &Vec<Pattern>) -> bool {
+        if paths.is_empty() {
+            return true;
+        }
+        for p in paths {
+            if p.matches_path(path) {
+                return true;
+            }
+        }
+        false
+    }
 
     for dent in walk {
         if let Ok(dent) = dent {
+            if !matches_path(dent.path(), &paths) {
+                continue;
+            }
             if !dent.is_dir() {
                 println!("{}", dent.path().display());
             }
