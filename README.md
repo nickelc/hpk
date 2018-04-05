@@ -23,10 +23,24 @@ Use `hpk extract --fix-lua-files ...` to fix the scripts on extraction.<br>
 Use `hpk create --cripple-lua-files ...` to change the bytecode header of the compiled lua scripts on repacking.
 The game can also load plain Lua files instead of a compiled version if you run into any problems.
 
+## Building
+
+hpk is written in Rust, so you'll need to grab a
+[Rust installation](https://www.rust-lang.org/) in order to compile it.
+Building is easy:
+
+```
+$ git clone https://github.com/nickelc/hpk
+$ cd hpk
+$ cargo build --release
+$ ./target/release/hpk --version
+hpk 0.3.0
+```
+
 ## Usage
 
 ### hpk help
-```bash
+```
 $ hpk help
 hpk
 
