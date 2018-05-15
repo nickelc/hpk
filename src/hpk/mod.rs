@@ -7,7 +7,7 @@ extern crate lz4;
 extern crate lz4_compress;
 #[macro_use]
 extern crate nom;
-extern crate tempdir;
+extern crate tempfile;
 extern crate walkdir;
 
 use std::fs::File;
@@ -768,7 +768,7 @@ where
 
     let (mut w, tmpfile, _tmpdir) = {
         if options.compress {
-            let tempdir = tempdir::TempDir::new("hpk")?;
+            let tempdir = tempfile::Builder::new().prefix("hpk").tempdir()?;
             let tmpfile = tempdir.path().join(file.as_ref().file_name().unwrap());
             (File::create(&tmpfile)?, Some(tmpfile), Some(tempdir))
         } else {

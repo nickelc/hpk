@@ -5,7 +5,7 @@ use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 
-use tempdir;
+use tempfile;
 
 use super::*;
 use super::read::FragmentedReader;
@@ -25,7 +25,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
         let mut f = File::open(&file)?;
 
         if get_compression(&mut f).is_compressed() {
-            let tempdir = tempdir::TempDir::new("hpk")?;
+            let tempdir = tempfile::Builder::new().prefix("hpk").tempdir()?;
             let tmpfile = tempdir.path().join(file.file_name().unwrap());
 
             let fragment = Fragment::new(0, f.metadata()?.len());

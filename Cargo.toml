@@ -23,7 +23,7 @@ glob="0.2"
 lz4-compress="0"
 nom="4.0.0-beta2"
 walkdir="2"
-tempdir="0.3"
+tempfile="3"
 
 [dependencies.clap]
 default-features = false
