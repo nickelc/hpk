@@ -17,11 +17,11 @@ path = "src/main.rs"
 
 [dependencies]
 byteorder = "1"
-filetime = "0.1"
+filetime = "0.2"
 flate2 = "1"
 glob="0.2"
 lz4-compress="0"
-nom="4.0.0-beta2"
+nom="4"
 walkdir="2"
 tempfile="3"
 

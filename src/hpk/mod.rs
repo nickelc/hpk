@@ -611,7 +611,7 @@ fn process_filedates<P: AsRef<Path>>(dest: P, r: &mut FragmentedReader<&File>) -
                 None => val,
             };
             let unix_secs = (val / WINDOWS_TICKS) - SEC_TO_UNIX_EPOCH;
-            let ft = filetime::FileTime::from_seconds_since_1970(unix_secs as u64, 0);
+            let ft = filetime::FileTime::from_unix_time(unix_secs, 0);
 
             let path = dest.as_ref().join(entry[1]);
             if is_valid!(path) {
