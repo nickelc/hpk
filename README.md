@@ -37,6 +37,18 @@ $ ./target/release/hpk --version
 hpk 0.3.0
 ```
 
+## Installation
+
+### Cargo
+```bash
+$ git clone https://github.com/nickelc/hpk.git
+$ cargo install --path hpk
+```
+
+### Windows
+
+Use the GitHub [Releases](https://github.com/nickelc/hpk/releases) tab to obtain the binary.
+
 ## Usage
 
 ### hpk help
