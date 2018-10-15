@@ -5,7 +5,7 @@ description = "HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta
 authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 
 [dependencies]
-gio="0.3"
+gio="0.5"
 open="1"
 
 [dependencies.hpk]
@@ -13,7 +13,7 @@ path=".."
 
 [dependencies.gtk]
 features=["v3_22"]
-version="0.3"
+version="0.5"
 
 [profile.release]
 lto=true
