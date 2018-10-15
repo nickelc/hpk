@@ -1,5 +1,5 @@
 extern crate hpk;
-extern crate tempdir;
+extern crate tempfile;
 
 use std::env;
 use std::io::prelude::*;
@@ -26,7 +26,7 @@ fn create_extract_and_compress() {
         }
     }
 
-    let root = tempdir::TempDir::new("hpk-tests");
+    let root = tempfile::Builder::new().prefix("hpk-tests").tempdir();
     let root = root.expect("Should have created a temp director");
     assert!(env::set_current_dir(root.path()).is_ok());
 
