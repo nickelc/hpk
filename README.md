@@ -1,4 +1,9 @@
 # HPK Archiver for Haemimont Engine game files
+[![Window build status][appveyor-badge]][appveyor-url]
+
+[appveyor-badge]: https://ci.appveyor.com/api/projects/status/github/nickelc/hpk?svg=true
+[appveyor-url]: https://ci.appveyor.com/project/nickelc/hpk
+
 ## Supported games
 * Tropico 3-5
 * Omerta: City of Gangsters
