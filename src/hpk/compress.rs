@@ -6,6 +6,7 @@ use flate2;
 #[cfg(feature = "lz4frame")]
 use lz4;
 use lz4_compress;
+use zstd::stream::Decoder as ZstdDecoder;
 
 pub trait Decoder {
     fn decode_chunk<R: Read + ?Sized, W: Write + ?Sized>(r: &mut R, w: &mut W) -> io::Result<u64>;
@@ -16,6 +17,7 @@ pub trait Encoder {
 }
 
 pub enum Zlib {}
+pub enum Zstd {}
 pub enum Lz4Block {}
 #[allow(dead_code)]
 #[cfg(feature = "lz4frame")]
@@ -82,6 +84,13 @@ impl Encoder for Zlib {
             }
             Err(e) => Err(e),
         }
+    }
+}
+
+impl Decoder for Zstd {
+    fn decode_chunk<R: Read + ?Sized, W: Write + ?Sized>(r: &mut R, w: &mut W) -> io::Result<u64> {
+        let mut dec = ZstdDecoder::new(r)?;
+        io::copy(&mut dec, w)
     }
 }
 

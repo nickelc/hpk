@@ -9,6 +9,7 @@ extern crate lz4_compress;
 extern crate nom;
 extern crate tempfile;
 extern crate walkdir;
+extern crate zstd;
 
 use std::fs::File;
 use std::io::prelude::*;
@@ -355,6 +356,7 @@ impl Default for CompressOptions {
 pub enum Compression {
     Zlib,
     Lz4,
+    Zstd,
     None,
 }
 
@@ -363,6 +365,7 @@ impl std::fmt::Display for Compression {
         match *self {
             Compression::Zlib => write!(f, "ZLIB"),
             Compression::Lz4 => write!(f, "LZ4"),
+            Compression::Zstd => write!(f, "ZSTD"),
             Compression::None => write!(f, "None"),
         }
     }
@@ -380,10 +383,11 @@ impl Compression {
         let mut buf = [0; 4];
         match r.read_exact(&mut buf) {
             Ok(_) => {
-                match (buf.eq(b"ZLIB"), buf.eq(b"LZ4 ")) {
-                    (true, _) => Ok(Compression::Zlib),
-                    (_, true) => Ok(Compression::Lz4),
-                    (_, _) => Ok(Compression::None),
+                match (buf.eq(b"ZLIB"), buf.eq(b"LZ4 "), buf.eq(b"ZSTD")) {
+                    (true, _, _) => Ok(Compression::Zlib),
+                    (_, true, _) => Ok(Compression::Lz4),
+                    (_, _, true) => Ok(Compression::Zstd),
+                    (_, _, _) => Ok(Compression::None),
                 }
             }
             Err(e) => return Err(HpkError::Io(e)),
@@ -394,6 +398,7 @@ impl Compression {
         match *self {
             Compression::Zlib => Ok(w.write(b"ZLIB")? as u64),
             Compression::Lz4 => Ok(w.write(b"LZ4 ")? as u64),
+            Compression::Zstd => Ok(w.write(b"ZSTD")? as u64),
             Compression::None => Ok(0),
         }
     }
@@ -639,6 +644,7 @@ where
     match get_compression(r) {
         Compression::Lz4 => decompress::<compress::Lz4Block>(r.len(), r, w),
         Compression::Zlib => decompress::<compress::Zlib>(r.len(), r, w),
+        Compression::Zstd => decompress::<compress::Zstd>(r.len(), r, w),
         Compression::None => io::copy(r, w).map_err(|e| HpkError::Io(e)),
     }
 }

@@ -24,6 +24,7 @@ lz4-compress="0.1"
 nom="4"
 walkdir="2"
 tempfile="3"
+zstd = "0.4"
 
 [dependencies.clap]
 default-features = false
