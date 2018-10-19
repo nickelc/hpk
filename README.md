@@ -234,15 +234,16 @@ file: index=8 depth=1 "water.lst"
 | 8      | 2    | Size of the following name in bytes       |
 | 10     | ?    | Name data                                 |
 
-### Fragmented File (zlib/lz4 compressed)
+### Fragmented File (zlib/lz4/zstd compressed)
 
 Offsets of compressed chunks are relative from the start of a fragment.<br>
 Victor Vran (Steam version) and Surviving Mars use LZ4 as compression.<br>
+ZSTD is used by Surviving Mars's mod editor.<br>
 The challenge hpks of Tropico 5 are compressed like a fragmented file.
 
 | Offset | Size | Value                                         |
 |--------|------|-----------------------------------------------|
-| 0      | 4    | Magic number, `0x42494C5A` (`"ZLIB"`)<br>`0x20345A4C` (`"LZ4 "`)  |
+| 0      | 4    | Magic number, `0x42494C5A` (`"ZLIB"`)<br>`0x20345A4C` (`"LZ4 "`)<br>`0x4454535A` (`"ZSTD"`)  |
 | 4      | 4    | Size of the inflated data in bytes            |
 | 8      | 4    | Inflated chunk size, `0x0800` (`32768`)       |
 | 12     | 4    | Chunk offset in bytes, `0x10` for one chunk   |
