@@ -20,6 +20,7 @@ environment:
       CHANNEL: stable
       BITS: 64
       MSYS2: 1
+      MINGW_PATH: "C:\\mingw-w64\\x86_64-7.2.0-posix-seh-rt_v5-rev1\\mingw64"
     - TARGET: x86_64-pc-windows-msvc
       CHANNEL: stable
       BITS: 64
@@ -27,6 +28,7 @@ environment:
       CHANNEL: stable
       BITS: 32
       MSYS2: 1
+      MINGW_PATH: "C:\\mingw-w64\\i686-6.3.0-posix-dwarf-rt_v5-rev1\\mingw32"
     - TARGET: i686-pc-windows-msvc
       CHANNEL: stable
       BITS: 32
@@ -38,9 +40,11 @@ install:
   - curl -sSf -o rustup-init.exe https://win.rustup.rs/
   - rustup-init.exe -y --default-host %TARGET%
   - set PATH=%PATH%;C:\Users\appveyor\.cargo\bin
-  - if defined MSYS2 set PATH=C:\msys64\mingw%BITS%\bin;%PATH%
+  # - if defined MSYS2 set PATH=C:\msys64\mingw%BITS%\bin;%PATH%
+  - if defined MSYS2 set PATH=%MINGW_PATH%\bin;%PATH%
   - rustc -V
   - cargo -V
+  - if defined MSYS2 gcc --version
 
 build: false
 
