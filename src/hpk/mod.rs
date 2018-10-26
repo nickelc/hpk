@@ -37,7 +37,7 @@ const HEADER_LENGTH: u8 = 36;
 /// The Windows epoch starts 1601-01-01T00:00:00Z. It's SEC_TO_UNIX_EPOCH seconds
 /// before the Unix epoch 1970-01-01T00:00:00Z.
 ///
-const SEC_TO_UNIX_EPOCH: i64 = 11644473600;
+const SEC_TO_UNIX_EPOCH: i64 = 11_644_473_600;
 const WINDOWS_TICKS: i64 = 10_000_000;
 
 type HpkResult<T> = Result<T, HpkError>;
