@@ -17,9 +17,9 @@ const LUA_INVALID_HEADER: [u8; 31] = [
     0x78, 0x56, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x00, 0x00, 0x00, 0x00, 0x00, 0x28, 0x77, 0x40,
 ];
-const LUA_SIG: &'static [u8] = b"\x1BLua";
-const LUA_VERSION53_FMT: &'static [u8] = b"\x53\x00";
-const LUAC_DATA: &'static [u8] = b"\x19\x93\r\n\x1A\n";
+const LUA_SIG: &[u8] = b"\x1BLua";
+const LUA_VERSION53_FMT: &[u8] = b"\x53\x00";
+const LUAC_DATA: &[u8] = b"\x19\x93\r\n\x1A\n";
 const LUAC_INT: u64 = 0x5678;
 const LUAC_NUM: f64 = 370.5;
 
