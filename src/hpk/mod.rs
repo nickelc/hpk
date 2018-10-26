@@ -456,7 +456,7 @@ impl CompressionHeader {
             compressor,
             inflated_length,
             chunk_size,
-            chunks: chunks,
+            chunks,
         })
     }
 
