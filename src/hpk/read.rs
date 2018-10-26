@@ -20,7 +20,7 @@ pub struct FragmentedReader<T> {
 }
 
 impl<T: Read + Seek> FragmentedReader<T> {
-    pub fn new(inner: T, fragments: Vec<Fragment>) -> Self {
+    pub fn new(inner: T, fragments: &[Fragment]) -> Self {
         let states: Vec<_> = fragments
             .iter()
             .map(|f| FragmentState {
@@ -168,7 +168,7 @@ mod tests {
             let fragments = create_fragments!($offsets);
 
             let cur = Cursor::new(data);
-            FragmentedReader::new(cur, fragments)
+            FragmentedReader::new(cur, &fragments)
         }};
     }
     // }}}

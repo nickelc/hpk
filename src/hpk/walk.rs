@@ -29,7 +29,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
             let tmpfile = tempdir.path().join(file.file_name().unwrap());
 
             let fragment = Fragment::new(0, f.metadata()?.len());
-            let mut r = FragmentedReader::new(&f, vec![fragment]);
+            let mut r = FragmentedReader::new(&f, &[fragment]);
             let mut out = File::create(&tmpfile)?;
             copy(&mut r, &mut out)?;
 
@@ -132,7 +132,7 @@ impl HpkIter {
         if !entry.is_dir() {
             let fragments = &self.fragments[entry.index()];
             let fragments: Vec<_> = fragments.iter().cloned().collect();
-            let r = FragmentedReader::new(&self.f, fragments);
+            let r = FragmentedReader::new(&self.f, &fragments);
             op(r)?;
         }
         Ok(())

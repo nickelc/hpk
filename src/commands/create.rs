@@ -102,5 +102,5 @@ pub fn execute(matches: &ArgMatches) {
         options.with_extensions(extensions);
     }
 
-    hpk::create(options, input, file).unwrap();
+    hpk::create(&options, input, file).unwrap();
 }

@@ -41,12 +41,12 @@ fn create_extract_and_compress() {
 
     {
         let options = Default::default();
-        hpk::create(options, "test1", "test1.hpk").unwrap();
+        hpk::create(&options, "test1", "test1.hpk").unwrap();
     }
 
     {
         let options = Default::default();
-        hpk::extract(options, "test1.hpk", "test1-extracted").expect("could not extract test1.hpk");
+        hpk::extract(&options, "test1.hpk", "test1-extracted").expect("could not extract test1.hpk");
     }
 
     assert_path_exists!("test1-extracted");

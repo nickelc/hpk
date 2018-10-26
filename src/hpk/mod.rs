@@ -318,7 +318,7 @@ pub fn compress(options: &CompressOptions, r: &mut Read, w: &mut Write) -> HpkRe
         };
     }
 
-    let header_size = CompressionHeader::write(&options, inflated_length, offsets, w)?;
+    let header_size = CompressionHeader::write(&options, inflated_length, &offsets, w)?;
 
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
@@ -463,7 +463,7 @@ impl CompressionHeader {
     pub fn write(
         options: &CompressOptions,
         inflated_length: u32,
-        offsets: Vec<u32>,
+        offsets: &[u32],
         out: &mut Write,
     ) -> HpkResult<u64> {
         const HDR_SIZE: u32 = 12;
@@ -518,7 +518,7 @@ impl ExtractOptions {
         self.verbose = verbose;
     }
 
-    pub fn set_paths(&mut self, paths: Vec<String>) {
+    pub fn set_paths(&mut self, paths: &[String]) {
         self.paths = paths.iter().filter_map(|s| Pattern::new(s).ok()).collect();
     }
 
@@ -536,7 +536,7 @@ impl ExtractOptions {
 }
 // }}}
 
-pub fn extract<P>(options: ExtractOptions, file: P, dest: P) -> HpkResult<()>
+pub fn extract<P>(options: &ExtractOptions, file: P, dest: P) -> HpkResult<()>
 where
     P: AsRef<Path>,
 {
@@ -744,7 +744,7 @@ impl CreateOptions {
 }
 // }}}
 
-pub fn create<P>(options: CreateOptions, dir: P, file: P) -> HpkResult<()>
+pub fn create<P>(options: &CreateOptions, dir: P, file: P) -> HpkResult<()>
 where
     P: AsRef<Path>,
 {

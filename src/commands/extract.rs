@@ -63,7 +63,7 @@ pub fn execute(matches: &ArgMatches) {
     }
 
     let mut options = hpk::ExtractOptions::new();
-    options.set_paths(values_t!(matches, "paths", String).unwrap_or_default());
+    options.set_paths(&values_t!(matches, "paths", String).unwrap_or_default());
     options.set_verbose(verbose);
     if matches.is_present("filedates") {
         options.skip_filedates();
@@ -71,5 +71,5 @@ pub fn execute(matches: &ArgMatches) {
     if matches.is_present("fix_lua") {
         options.fix_lua_files();
     }
-    hpk::extract(options, input, dest).unwrap();
+    hpk::extract(&options, input, dest).unwrap();
 }

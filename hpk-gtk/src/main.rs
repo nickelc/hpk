@@ -276,11 +276,11 @@ impl App {
                 }
                 Ok(Action::ExtractionCompleted(dest_dir)) => {
                     dialog.hide();
-                    open_extraction_completed_dialog(&window, dest_dir);
+                    open_extraction_completed_dialog(&window, &dest_dir);
                 }
                 Ok(Action::CreationCompleted(dest_file)) => {
                     dialog.hide();
-                    open_created_successfully_dialog(&window, dest_file);
+                    open_created_successfully_dialog(&window, &dest_file);
                 }
                 Err(_) => {}
             }
@@ -294,7 +294,7 @@ impl App {
 fn extract(sender: Sender<Action>, src_file: PathBuf, dest_dir: PathBuf) {
     thread::spawn(move || {
         let options = hpk::ExtractOptions::new();
-        hpk::extract(options, &src_file, &dest_dir).unwrap();
+        hpk::extract(&options, &src_file, &dest_dir).unwrap();
 
         sender.send(Action::ExtractionCompleted(dest_dir)).expect(
             "Couldn't send data to the channel",
@@ -305,7 +305,7 @@ fn extract(sender: Sender<Action>, src_file: PathBuf, dest_dir: PathBuf) {
 fn create(sender: Sender<Action>, src_dir: PathBuf, dest_file: PathBuf) {
     thread::spawn(move || {
         let options = hpk::CreateOptions::new();
-        hpk::create(options, &src_dir, &dest_file).unwrap();
+        hpk::create(&options, &src_dir, &dest_file).unwrap();
 
         sender.send(Action::CreationCompleted(dest_file)).expect(
             "Couldn't send data to the channel",
@@ -313,7 +313,7 @@ fn create(sender: Sender<Action>, src_dir: PathBuf, dest_file: PathBuf) {
     });
 }
 
-fn open_extraction_completed_dialog(window: &gtk::ApplicationWindow, dest_dir: PathBuf) {
+fn open_extraction_completed_dialog(window: &gtk::ApplicationWindow, dest_dir: &PathBuf) {
     let dialog = new_dialog(
         window,
         "Extraction completted successfully",
@@ -326,7 +326,7 @@ fn open_extraction_completed_dialog(window: &gtk::ApplicationWindow, dest_dir: P
     dialog.close();
 }
 
-fn open_created_successfully_dialog(window: &gtk::ApplicationWindow, dest_file: PathBuf) {
+fn open_created_successfully_dialog(window: &gtk::ApplicationWindow, dest_file: &PathBuf) {
     let dialog = new_dialog(
         window,
         &format!("{:?} created successfully", dest_file.file_name().unwrap()),
