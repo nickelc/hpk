@@ -103,7 +103,7 @@ pub fn execute(matches: &ArgMatches) {
                 );
                 let mut first = Some(true);
                 for chunk in &hdr.chunks {
-                    if let Some(_) = first.take() {
+                    if first.take().is_some() {
                         println!("  chunks: 0x{:<6X} len: {}", chunk.offset, chunk.length);
                     } else {
                         println!("          0x{:<6X} len: {}", chunk.offset, chunk.length);
