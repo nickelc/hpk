@@ -7,6 +7,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use hpk;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     fn validate_input(value: String) -> Result<(), String> {
         if let Ok(md) = fs::metadata(value) {
             if md.is_file() {
@@ -15,6 +16,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         }
         Err(String::from("Not a valid file"))
     }
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     fn validate_dest(value: String) -> Result<(), String> {
         match fs::metadata(value) {
             Ok(ref md) if md.is_file() => Err(String::from("Not a valid directory")),

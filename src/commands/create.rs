@@ -22,12 +22,14 @@ const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
                                default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     fn validate_chunk_size(value: String) -> Result<(), String> {
         match value.parse::<u32>() {
             Ok(_) => Ok(()),
             Err(_) => Err(String::from("Invalid value for chunk size")),
         }
     }
+    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
     fn validate_dir(value: String) -> Result<(), String> {
         if let Ok(md) = fs::metadata(value) {
             if md.is_dir() {
