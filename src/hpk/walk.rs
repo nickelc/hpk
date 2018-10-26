@@ -131,7 +131,7 @@ impl HpkIter {
     {
         if !entry.is_dir() {
             let fragments = &self.fragments[entry.index()];
-            let fragments: Vec<_> = fragments.iter().cloned().collect();
+            let fragments: Vec<_> = fragments.to_vec();
             let r = FragmentedReader::new(&self.f, &fragments);
             op(r)?;
         }
