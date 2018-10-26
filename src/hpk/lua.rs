@@ -58,6 +58,9 @@ mod parser {
     );
 }
 
+pub type LuaHeaderRewriteReader<R> = LuaHeaderRewriter<R, fn(&mut R, &mut [u8]) -> io::Result<usize>>;
+pub type LuaHeaderRewriteWriter<W> = LuaHeaderRewriter<W, fn(&mut W, &[u8]) -> io::Result<usize>>;
+
 pub struct LuaHeaderRewriter<T, F> {
     inner: T,
     done: bool,
@@ -110,14 +113,14 @@ where
     }
 }
 
-pub fn cripple_header<R>(r: R) -> LuaHeaderRewriter<R, fn(&mut R, &mut [u8]) -> io::Result<usize>>
+pub fn cripple_header<R>(r: R) -> LuaHeaderRewriteReader<R>
 where
     R: Read,
 {
     LuaHeaderRewriter::new(r, read_with_invalid_header)
 }
 
-pub fn fix_header<W>(w: W) -> LuaHeaderRewriter<W, fn(&mut W, &[u8]) -> io::Result<usize>>
+pub fn fix_header<W>(w: W) -> LuaHeaderRewriteWriter<W>
 where
     W: Write,
 {
