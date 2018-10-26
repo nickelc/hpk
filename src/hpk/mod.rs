@@ -878,12 +878,10 @@ where
             } else {
                 io::copy(&mut r, w)?
             }
+        } else if _compress {
+            compress(&options.compress_options, &mut fin, w)?
         } else {
-            if _compress {
-                compress(&options.compress_options, &mut fin, w)?
-            } else {
-                io::copy(&mut fin, w)?
-            }
+            io::copy(&mut fin, w)?
         };
 
         Ok(Fragment::new(position, n))
