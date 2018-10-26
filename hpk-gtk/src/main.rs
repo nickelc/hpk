@@ -30,9 +30,11 @@ macro_rules! clone {
 }
 
 macro_rules! get_widget {
-    ($builder:expr, $id:expr) => (
-        $builder.get_object($id).expect(concat!("Couldn't get ", $id))
-    );
+    ($builder:expr, $id:expr) => {
+        $builder
+            .get_object($id)
+            .expect(concat!("Couldn't get ", $id))
+    };
 }
 
 #[derive(Clone)]
@@ -151,66 +153,67 @@ impl App {
         // }}}
 
         // setup: ExtractWidget {{{
-        extract_widget.src_file.connect_file_set(
-            clone!(extract_widget => move |_| {
+        extract_widget
+            .src_file
+            .connect_file_set(clone!(extract_widget => move |_| {
                 match extract_widget.get_data() {
                     (Some(_), Some(_)) => extract_widget.action.set_enabled(true),
                     _ => extract_widget.action.set_enabled(false),
                 }
-            }),
-        );
-        extract_widget.dest_dir.connect_file_set(
-            clone!(extract_widget => move |_| {
+            }));
+        extract_widget
+            .dest_dir
+            .connect_file_set(clone!(extract_widget => move |_| {
                 match extract_widget.get_data() {
                     (Some(_), Some(_)) => extract_widget.action.set_enabled(true),
                     _ => extract_widget.action.set_enabled(false),
                 }
-            }),
-        );
-        extract_widget.action.connect_activate(
-            clone!(extract_widget, sender => move |_, _| {
+            }));
+        extract_widget
+            .action
+            .connect_activate(clone!(extract_widget, sender => move |_, _| {
                 if let (Some(file), Some(dir)) = extract_widget.get_data() {
                     sender.send(Action::Extract { src_file: file, dest_dir: dir })
                         .expect("Couldn't send data to the channel");
                 }
-            }),
-        );
+            }));
         extract_widget.action.set_enabled(false);
         // }}}
 
         // setup: CreateWidget {{{
-        create_widget.src_dir.connect_file_set(
-            clone!(create_widget => move |_| {
+        create_widget
+            .src_dir
+            .connect_file_set(clone!(create_widget => move |_| {
                 match create_widget.get_data() {
                     (Some(_), Some(_), Some(ref n)) if !n.is_empty() => {
                         create_widget.action.set_enabled(true)
                     },
                     _ => create_widget.action.set_enabled(false),
                 }
-            }),
-        );
-        create_widget.filename.connect_changed(
-            clone!(create_widget => move |_| {
+            }));
+        create_widget
+            .filename
+            .connect_changed(clone!(create_widget => move |_| {
                 match create_widget.get_data() {
                     (Some(_), Some(_), Some(ref n)) if !n.is_empty() => {
                         create_widget.action.set_enabled(true)
                     },
                     _ => create_widget.action.set_enabled(false),
                 }
-            }),
-        );
-        create_widget.dest_dir.connect_file_set(
-            clone!(create_widget => move |_| {
+            }));
+        create_widget
+            .dest_dir
+            .connect_file_set(clone!(create_widget => move |_| {
                 match create_widget.get_data() {
                     (Some(_), Some(_), Some(ref n)) if !n.is_empty() => {
                         create_widget.action.set_enabled(true)
                     },
                     _ => create_widget.action.set_enabled(false),
                 }
-            }),
-        );
-        create_widget.action.connect_activate(
-            clone!(create_widget, sender => move |_, _| {
+            }));
+        create_widget
+            .action
+            .connect_activate(clone!(create_widget, sender => move |_, _| {
                 if let (Some(src_dir), Some(location), Some(filename)) = create_widget.get_data() {
                     if let Some(name) = PathBuf::from(filename).file_name() {
                         let dest_file = location.join(name);
@@ -218,8 +221,7 @@ impl App {
                             .expect("Couldn't send data to the channel");
                     }
                 }
-            }),
-        );
+            }));
         create_widget.action.set_enabled(false);
         // }}}
 
@@ -290,9 +292,9 @@ fn extract(sender: Sender<Action>, src_file: PathBuf, dest_dir: PathBuf) {
         let options = hpk::ExtractOptions::new();
         hpk::extract(&options, &src_file, &dest_dir).unwrap();
 
-        sender.send(Action::ExtractionCompleted(dest_dir)).expect(
-            "Couldn't send data to the channel",
-        );
+        sender
+            .send(Action::ExtractionCompleted(dest_dir))
+            .expect("Couldn't send data to the channel");
     });
 }
 
@@ -301,9 +303,9 @@ fn create(sender: Sender<Action>, src_dir: PathBuf, dest_file: PathBuf) {
         let options = hpk::CreateOptions::new();
         hpk::create(&options, &src_dir, &dest_file).unwrap();
 
-        sender.send(Action::CreationCompleted(dest_file)).expect(
-            "Couldn't send data to the channel",
-        );
+        sender
+            .send(Action::CreationCompleted(dest_file))
+            .expect("Couldn't send data to the channel");
     });
 }
 
