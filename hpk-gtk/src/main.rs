@@ -185,7 +185,7 @@ impl App {
         create_widget.src_dir.connect_file_set(
             clone!(create_widget => move |_| {
                 match create_widget.get_data() {
-                    (Some(_), Some(_), Some(ref n)) if n.len() > 0 => {
+                    (Some(_), Some(_), Some(ref n)) if !n.is_empty() => {
                         create_widget.action.set_enabled(true)
                     },
                     _ => create_widget.action.set_enabled(false),
@@ -195,7 +195,7 @@ impl App {
         create_widget.filename.connect_changed(
             clone!(create_widget => move |_| {
                 match create_widget.get_data() {
-                    (Some(_), Some(_), Some(ref n)) if n.len() > 0 => {
+                    (Some(_), Some(_), Some(ref n)) if !n.is_empty() => {
                         create_widget.action.set_enabled(true)
                     },
                     _ => create_widget.action.set_enabled(false),
@@ -205,7 +205,7 @@ impl App {
         create_widget.dest_dir.connect_file_set(
             clone!(create_widget => move |_| {
                 match create_widget.get_data() {
-                    (Some(_), Some(_), Some(ref n)) if n.len() > 0 => {
+                    (Some(_), Some(_), Some(ref n)) if !n.is_empty() => {
                         create_widget.action.set_enabled(true)
                     },
                     _ => create_widget.action.set_enabled(false),
