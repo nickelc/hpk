@@ -2,15 +2,15 @@ extern crate hpk;
 extern crate tempfile;
 
 use std::env;
-use std::io::prelude::*;
-use std::io;
 use std::fs;
+use std::io;
+use std::io::prelude::*;
 use std::path::Path;
 
 macro_rules! assert_path_exists {
     ($p:expr) => {
         assert!(Path::new($p).exists(), format!("{} does not exist", $p));
-    }
+    };
 }
 
 #[test]

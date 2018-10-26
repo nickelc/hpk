@@ -1,5 +1,5 @@
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 
 #[cfg_attr(rustfmt, rustfmt_skip)]
 const LUA_VALID_HEADER: [u8; 33] = [
@@ -24,8 +24,8 @@ const LUAC_INT: u64 = 0x5678;
 const LUAC_NUM: f64 = 370.5;
 
 mod parser {
-    use nom::*;
     use super::*;
+    use nom::*;
 
     named!(lua_sig, tag!(LUA_SIG));
     named!(lua_version53_fmt, tag!(LUA_VERSION53_FMT));

@@ -1,5 +1,5 @@
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 use std::io::Cursor;
 
 use flate2;
@@ -71,7 +71,6 @@ impl Decoder for Zlib {
         io::copy(&mut dec, w)
     }
 }
-
 
 impl Encoder for Zlib {
     fn encode_chunk<R: Read, W: Write>(r: &mut R, w: &mut W) -> io::Result<u64> {

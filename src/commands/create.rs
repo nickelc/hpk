@@ -19,7 +19,7 @@ default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
 short: 'Windows file time / 2000' used by Tropico 4 and Omerta";
 
 const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
-default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
+                               default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     fn validate_chunk_size(value: String) -> Result<(), String> {

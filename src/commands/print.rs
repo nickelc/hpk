@@ -17,9 +17,10 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name("print")
         .about("Print information of a hpk archive")
         .display_order(30)
-        .arg(Arg::from_usage("<file> 'hpk archive'")
-                .validator(validate_input))
-        .arg(Arg::from_usage("[header] --header-only 'Print only the header informations'"))
+        .arg(Arg::from_usage("<file> 'hpk archive'").validator(validate_input))
+        .arg(Arg::from_usage(
+            "[header] --header-only 'Print only the header informations'",
+        ))
 }
 
 pub fn execute(matches: &ArgMatches) {
@@ -32,11 +33,23 @@ pub fn execute(matches: &ArgMatches) {
     }
     println!("header:");
     println!("  data_offset: 0x{:X}", walk.header().data_offset);
-    println!("  fragments_residual_offset: 0x{:X}", walk.header().fragments_residual_offset);
-    println!("  fragments_residual_count: {}", walk.header().fragments_residual_count);
+    println!(
+        "  fragments_residual_offset: 0x{:X}",
+        walk.header().fragments_residual_offset
+    );
+    println!(
+        "  fragments_residual_count: {}",
+        walk.header().fragments_residual_count
+    );
     println!("  fragments_per_file: {}", walk.header().fragments_per_file);
-    println!("  fragments_filesystem_offset: 0x{:X}", walk.header().fragmented_filesystem_offset);
-    println!("  fragments_filesystem_length: {}", walk.header().fragmented_filesystem_length);
+    println!(
+        "  fragments_filesystem_offset: 0x{:X}",
+        walk.header().fragmented_filesystem_offset
+    );
+    println!(
+        "  fragments_filesystem_length: {}",
+        walk.header().fragmented_filesystem_length
+    );
     println!("filesystem entries: {}", walk.header().filesystem_entries());
 
     if matches.is_present("header") {
@@ -63,20 +76,25 @@ pub fn execute(matches: &ArgMatches) {
     }
 
     while let Some(Ok(dent)) = walk.next() {
-        println!("{} index={} depth={} {:?}",
+        println!(
+            "{} index={} depth={} {:?}",
             if dent.is_dir() { "dir: " } else { "file:" },
             dent.index() + 1,
             dent.depth(),
             dent.path().display(),
         );
         let fragment = &walk.fragments[dent.index()][0];
-        println!(" fragment: 0x{:X} len: {}", fragment.offset, fragment.length);
+        println!(
+            " fragment: 0x{:X} len: {}",
+            fragment.offset, fragment.length
+        );
         walk.read_file(&dent, |mut r| {
             if r.len() == 0 {
                 println!(" empty file");
             } else if hpk::get_compression(&mut r).is_compressed() {
                 let hdr = hpk::CompressionHeader::read_from(r.len(), &mut r).unwrap();
-                println!(" compressed: {} inflated_length={} chunk_size={} chunks={}",
+                println!(
+                    " compressed: {} inflated_length={} chunk_size={} chunks={}",
                     hdr.compressor,
                     hdr.inflated_length,
                     hdr.chunk_size,

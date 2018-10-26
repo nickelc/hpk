@@ -3,8 +3,8 @@ extern crate glob;
 use std::fs;
 use std::path::Path;
 
-use clap::{App, Arg, ArgMatches, SubCommand};
 use self::glob::Pattern;
+use clap::{App, Arg, ArgMatches, SubCommand};
 
 use hpk;
 
@@ -20,8 +20,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name("list")
         .about("List the content of a hpk archive")
         .display_order(20)
-        .arg(Arg::from_usage("<file> 'hpk archive'")
-                .validator(validate_input))
+        .arg(Arg::from_usage("<file> 'hpk archive'").validator(validate_input))
         .arg(Arg::from_usage("[paths]..."))
 }
 

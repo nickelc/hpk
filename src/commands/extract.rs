@@ -25,23 +25,31 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name("extract")
         .about("Extract files from a hpk archive")
         .display_order(10)
-        .arg(Arg::from_usage("<file> 'hpk archive'")
-                .validator(validate_input))
-        .arg(Arg::from_usage("<dest> 'destination folder'")
-                .validator(validate_dest))
-        .arg(Arg::from_usage("[paths]...")
-                .help("An optional list of archive members to be processed, separated by spaces."))
-        .arg(Arg::from_usage("[filedates] --ignore-filedates")
-                .help("Skip processing of a _filedates file and just extract it"))
-        .arg(Arg::from_usage("[fix_lua] --fix-lua-files")
-                .help("Fix the bytecode header of Surviving Mars' Lua files"))
-        .arg(Arg::from_usage("[force] --force 'Force extraction if destination folder is not empty'"))
-        .arg(Arg::from_usage("[verbose] -v 'Verbosely list files processed'"))
+        .arg(Arg::from_usage("<file> 'hpk archive'").validator(validate_input))
+        .arg(Arg::from_usage("<dest> 'destination folder'").validator(validate_dest))
+        .arg(
+            Arg::from_usage("[paths]...")
+                .help("An optional list of archive members to be processed, separated by spaces."),
+        ).arg(
+            Arg::from_usage("[filedates] --ignore-filedates")
+                .help("Skip processing of a _filedates file and just extract it"),
+        ).arg(
+            Arg::from_usage("[fix_lua] --fix-lua-files")
+                .help("Fix the bytecode header of Surviving Mars' Lua files"),
+        ).arg(Arg::from_usage(
+            "[force] --force 'Force extraction if destination folder is not empty'",
+        )).arg(Arg::from_usage(
+            "[verbose] -v 'Verbosely list files processed'",
+        ))
 }
 
 pub fn execute(matches: &ArgMatches) {
-    let input = value_t!(matches, "file", String).map(PathBuf::from).unwrap();
-    let dest = value_t!(matches, "dest", String).map(PathBuf::from).unwrap();
+    let input = value_t!(matches, "file", String)
+        .map(PathBuf::from)
+        .unwrap();
+    let dest = value_t!(matches, "dest", String)
+        .map(PathBuf::from)
+        .unwrap();
     let force = matches.is_present("force");
     let verbose = matches.is_present("verbose");
 

@@ -11,14 +11,14 @@ extern crate tempfile;
 extern crate walkdir;
 extern crate zstd;
 
+use std::ffi::OsStr;
 use std::fs::File;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::SeekFrom;
-use std::str;
 use std::path::{Path, PathBuf};
-use std::ffi::OsStr;
+use std::str;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
 use glob::Pattern;
@@ -28,8 +28,8 @@ mod lua;
 mod read;
 mod walk;
 
-use read::FragmentedReader;
 pub use self::walk::walk;
+use read::FragmentedReader;
 
 const HPK_SIG: [u8; 4] = *b"BPUL";
 const HEADER_LENGTH: u8 = 36;
@@ -76,7 +76,6 @@ pub struct Header {
 }
 
 impl Header {
-
     pub fn new(fragmented_filesystem_offset: u64, fragmented_filesystem_length: u64) -> Header {
         Header {
             _identifier: HPK_SIG,
@@ -126,7 +125,8 @@ impl Header {
 
     pub fn filesystem_entries(&self) -> usize {
         const FRAGMENT_SIZE: u32 = 8;
-        (self.fragmented_filesystem_length as u32 / (FRAGMENT_SIZE * self.fragments_per_file)) as usize
+        (self.fragmented_filesystem_length as u32 / (FRAGMENT_SIZE * self.fragments_per_file))
+            as usize
     }
 }
 
@@ -137,7 +137,6 @@ pub struct Fragment {
 }
 
 impl Fragment {
-
     pub fn read_from<T: Read>(mut r: T) -> HpkResult<Fragment> {
         let offset = u64::from(r.read_u32::<LE>()?);
         let length = u64::from(r.read_u32::<LE>()?);
@@ -176,15 +175,14 @@ pub struct DirEntry {
 }
 
 impl DirEntry {
-
     pub fn path(&self) -> &Path {
         &self.path
     }
 
     pub fn file_name(&self) -> &OsStr {
-        self.path.file_name().unwrap_or_else(
-            || self.path.as_os_str(),
-        )
+        self.path
+            .file_name()
+            .unwrap_or_else(|| self.path.as_os_str())
     }
 
     pub fn index(&self) -> usize {
@@ -231,22 +229,23 @@ impl DirEntry {
     }
 
     fn read_from<T: Read>(parent: &Path, depth: usize, mut r: T) -> HpkResult<DirEntry> {
-        let fragment_index = r.read_u32::<LE>()?.checked_sub(1).ok_or(
-            HpkError::InvalidFragmentIndex,
-        )?;
+        let fragment_index = r
+            .read_u32::<LE>()?
+            .checked_sub(1)
+            .ok_or(HpkError::InvalidFragmentIndex)?;
 
-        let ft = r.read_u32::<LE>().map(|t| if t == 0 {
-            FileType::File(fragment_index as usize)
-        } else {
-            FileType::Dir(fragment_index as usize)
+        let ft = r.read_u32::<LE>().map(|t| {
+            if t == 0 {
+                FileType::File(fragment_index as usize)
+            } else {
+                FileType::Dir(fragment_index as usize)
+            }
         })?;
 
         let name_length = r.read_u16::<LE>()?;
         let mut buf = vec![0; name_length as usize];
         r.read_exact(&mut buf)?;
-        let name = str::from_utf8(&buf).map_err(
-            |e| HpkError::InvalidDirEntryName(e),
-        )?;
+        let name = str::from_utf8(&buf).map_err(|e| HpkError::InvalidDirEntryName(e))?;
 
         Ok(DirEntry {
             path: parent.join(name),
@@ -270,12 +269,15 @@ impl DirEntry {
 }
 
 pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
-    let pos = r.seek(SeekFrom::Current(0)).expect("failed to get current position");
+    let pos = r
+        .seek(SeekFrom::Current(0))
+        .expect("failed to get current position");
     let compression = match Compression::read_from(r) {
         Ok(c) => c,
         Err(_) => Compression::None,
     };
-    r.seek(SeekFrom::Start(pos)).expect("failed to seek to previous position");
+    r.seek(SeekFrom::Start(pos))
+        .expect("failed to seek to previous position");
 
     compression
 }
@@ -382,14 +384,12 @@ impl Compression {
     fn read_from<T: Read + ?Sized>(r: &mut T) -> HpkResult<Self> {
         let mut buf = [0; 4];
         match r.read_exact(&mut buf) {
-            Ok(_) => {
-                match (buf.eq(b"ZLIB"), buf.eq(b"LZ4 "), buf.eq(b"ZSTD")) {
-                    (true, _, _) => Ok(Compression::Zlib),
-                    (_, true, _) => Ok(Compression::Lz4),
-                    (_, _, true) => Ok(Compression::Zstd),
-                    (_, _, _) => Ok(Compression::None),
-                }
-            }
+            Ok(_) => match (buf.eq(b"ZLIB"), buf.eq(b"LZ4 "), buf.eq(b"ZSTD")) {
+                (true, _, _) => Ok(Compression::Zlib),
+                (_, true, _) => Ok(Compression::Lz4),
+                (_, _, true) => Ok(Compression::Zstd),
+                (_, _, _) => Ok(Compression::None),
+            },
             Err(e) => return Err(HpkError::Io(e)),
         }
     }
@@ -418,7 +418,6 @@ pub struct Chunk {
 }
 
 impl CompressionHeader {
-
     pub fn read_from<T: Read + ?Sized>(length: u64, r: &mut T) -> HpkResult<CompressionHeader> {
         let compressor = Compression::read_from(r)?;
 
@@ -566,12 +565,12 @@ where
                     if options.verbose {
                         println!("{}", path.display());
                     }
-                    if !options.skip_filedates && entry.depth() == 1 &&
-                        entry.path().eq(_filedates)
+                    if !options.skip_filedates && entry.depth() == 1 && entry.path().eq(_filedates)
                     {
                         process_filedates(dest, &mut r)
                     } else {
-                        let ext = path.extension()
+                        let ext = path
+                            .extension()
                             .and_then(|s| s.to_str())
                             .map_or("".to_string(), |s| s.to_ascii_lowercase());
 
@@ -600,7 +599,7 @@ fn process_filedates<P: AsRef<Path>>(dest: P, r: &mut FragmentedReader<&File>) -
             #[cfg(windows)]
             let valid = $e.exists() && $e.metadata()?.is_file();
             valid
-        }}
+        }};
     }
     // }}}
 
@@ -754,21 +753,21 @@ where
 
     // macro: strip_prefix {{{
     macro_rules! strip_prefix {
-        (dir $path: expr) => ({
+        (dir $path: expr) => {{
             let path = $path.strip_prefix(&dir).unwrap();
             let parent = path.parent();
             (path, parent)
-        });
-        (file $path: expr) => ({
+        }};
+        (file $path: expr) => {{
             let (path, parent) = strip_prefix!(dir $path);
             (path, parent.unwrap())
-        })
+        }};
     }
     // }}}
 
-    let walkdir = WalkDir::new(&dir).contents_first(true).sort_by(|a, b| {
-        a.file_name().cmp(b.file_name())
-    });
+    let walkdir = WalkDir::new(&dir)
+        .contents_first(true)
+        .sort_by(|a, b| a.file_name().cmp(b.file_name()));
     let mut fragments: Vec<Fragment> = vec![];
     let mut stack = HashMap::new();
 
@@ -803,7 +802,6 @@ where
             let parent_buf = stack.entry(parent.to_path_buf()).or_insert_with(Vec::new);
             let dent = DirEntry::new_file(path, index, entry.depth());
             dent.write(parent_buf)?;
-
         } else if entry.file_type().is_dir() {
             let (path, parent) = strip_prefix!(dir entry.path());
             let mut dir_buffer = stack.remove(&path.to_path_buf()).unwrap_or_else(Vec::new);
@@ -833,7 +831,6 @@ where
                     .entry(parent.expect("bug?").to_path_buf())
                     .or_insert_with(Vec::new);
                 dent.write(parent_buf)?;
-
             } else {
                 // root dir must be the first fragment
                 fragments.insert(0, fragment);
@@ -866,7 +863,8 @@ where
     where
         W: Write + Seek,
     {
-        let ext = file.extension()
+        let ext = file
+            .extension()
             .and_then(|s| s.to_str())
             .map_or("".to_string(), |s| s.to_ascii_lowercase());
         let _compress = options.extensions.contains(&ext);

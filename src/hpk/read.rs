@@ -1,6 +1,6 @@
 use std::cmp;
-use std::io::prelude::*;
 use std::io;
+use std::io::prelude::*;
 use std::io::SeekFrom;
 
 use super::Fragment;
@@ -20,24 +20,19 @@ pub struct FragmentedReader<T> {
 }
 
 impl<T: Read + Seek> FragmentedReader<T> {
-
     pub fn new(inner: T, fragments: Vec<Fragment>) -> Self {
         let states: Vec<_> = fragments
             .iter()
-            .map(|f| {
-                FragmentState {
-                    offset: f.offset,
-                    length: f.length,
-                    end_pos: 0,
-                    limit: f.length,
-                }
-            })
-            .scan(0, |state, mut f| {
+            .map(|f| FragmentState {
+                offset: f.offset,
+                length: f.length,
+                end_pos: 0,
+                limit: f.length,
+            }).scan(0, |state, mut f| {
                 *state += f.length;
                 f.end_pos = *state;
                 Some(f)
-            })
-            .collect();
+            }).collect();
 
         let length = fragments.iter().map(|f| f.length).sum();
 
@@ -79,9 +74,9 @@ impl<T: Read + Seek> FragmentedReader<T> {
 }
 
 impl<T: Read + Seek> Read for FragmentedReader<T> {
-
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        let current = self.fragments
+        let current = self
+            .fragments
             .iter()
             .rposition(|f| f.end_pos <= self.pos)
             .map_or(0, |i| i + 1);
@@ -103,7 +98,6 @@ impl<T: Read + Seek> Read for FragmentedReader<T> {
 }
 
 impl<T: Read + Seek> Seek for FragmentedReader<T> {
-
     fn seek(&mut self, style: SeekFrom) -> io::Result<u64> {
         let (base_pos, offset) = match style {
             SeekFrom::Start(n) => {
@@ -142,49 +136,46 @@ mod tests {
 
     // macro: create_buffer {{{
     macro_rules! create_buffer {
-        ($size:expr, $init:expr, $data: expr) => (
-            {
-                let mut buf: Vec<u8> = vec![$init; $size];
+        ($size:expr, $init:expr, $data: expr) => {{
+            let mut buf: Vec<u8> = vec![$init; $size];
 
-                let mut iter = $data.iter();
-                while let Some(&(start, end, val)) = iter.next() {
-                    let slice = &mut buf[start as usize..(start + end) as usize];
-                    unsafe {
-                        ptr::write_bytes(slice.as_mut_ptr(), val, slice.len());
-                    }
+            let mut iter = $data.iter();
+            while let Some(&(start, end, val)) = iter.next() {
+                let slice = &mut buf[start as usize..(start + end) as usize];
+                unsafe {
+                    ptr::write_bytes(slice.as_mut_ptr(), val, slice.len());
                 }
-                buf
             }
-        );
+            buf
+        }};
     }
     // }}}
 
     // macro: create_fragments {{{
     macro_rules! create_fragments {
-        ($x:expr) => (
-            $x.iter().map(|x| Fragment::new(x.0, x.1))
+        ($x:expr) => {
+            $x.iter()
+                .map(|x| Fragment::new(x.0, x.1))
                 .collect::<Vec<_>>()
-        );
+        };
     }
     // }}}
 
     // macro: create_fragmented_reader {{{
     macro_rules! create_fragmented_reader {
-        ($buffer_size:expr, $initial_value:expr, $offsets:expr) => (
-            {
-                let data = create_buffer!($buffer_size, $initial_value, $offsets);
-                let fragments = create_fragments!($offsets);
+        ($buffer_size:expr, $initial_value:expr, $offsets:expr) => {{
+            let data = create_buffer!($buffer_size, $initial_value, $offsets);
+            let fragments = create_fragments!($offsets);
 
-                let cur = Cursor::new(data);
-                FragmentedReader::new(cur, fragments)
-            }
-        )
+            let cur = Cursor::new(data);
+            FragmentedReader::new(cur, fragments)
+        }};
     }
     // }}}
 
     // macro: print_buf {{{
     macro_rules! print_buf {
-        ($indent:expr, $buf:expr) => (
+        ($indent:expr, $buf:expr) => {
             for row in $buf.chunks(16) {
                 print!($indent);
                 for col in row.chunks(2) {
@@ -196,7 +187,7 @@ mod tests {
                 }
                 println!();
             }
-        )
+        };
     }
     // }}}
 
@@ -206,7 +197,6 @@ mod tests {
     }
 
     impl<T: Read + Seek> PrintState for FragmentedReader<T> {
-
         fn print_state(&mut self) {
             println!("pos: {}", self.pos);
             println!("inner pos: {:?}", self.inner.seek(SeekFrom::Current(0)));
@@ -219,10 +209,7 @@ mod tests {
             for (i, s) in self.fragments.iter().enumerate() {
                 println!(
                     "{}: off: {} len: {} limit: {}",
-                    i,
-                    s.offset,
-                    s.length,
-                    s.limit
+                    i, s.offset, s.length, s.limit
                 );
             }
         }

@@ -1,14 +1,14 @@
+use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
 use std::io::SeekFrom;
-use std::fs::File;
 use std::path::Path;
 use std::path::PathBuf;
 
 use tempfile;
 
-use super::*;
 use super::read::FragmentedReader;
+use super::*;
 
 macro_rules! itry {
     ($e:expr) => {
@@ -16,7 +16,7 @@ macro_rules! itry {
             Ok(v) => v,
             Err(err) => return Some(Err(From::from(err))),
         }
-    }
+    };
 }
 
 pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
@@ -113,7 +113,6 @@ impl Iterator for HpkIter {
 }
 
 impl HpkIter {
-
     pub fn path(&self) -> &Path {
         &self.file
     }
@@ -151,7 +150,8 @@ impl HpkIter {
         let mut dir_entries = Cursor::new(vec![0; fragment.length as usize]);
 
         self.f.seek(SeekFrom::Start(fragment.offset))?;
-        self.f.read_exact(&mut dir_entries.get_mut().as_mut_slice())?;
+        self.f
+            .read_exact(&mut dir_entries.get_mut().as_mut_slice())?;
 
         let mut list = vec![];
         while dir_entries.position() < fragment.length {
