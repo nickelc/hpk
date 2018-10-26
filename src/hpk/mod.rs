@@ -390,7 +390,7 @@ impl Compression {
                 (_, _, true) => Ok(Compression::Zstd),
                 (_, _, _) => Ok(Compression::None),
             },
-            Err(e) => return Err(HpkError::Io(e)),
+            Err(e) => Err(HpkError::Io(e)),
         }
     }
 
