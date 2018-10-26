@@ -169,12 +169,9 @@ impl App {
         );
         extract_widget.action.connect_activate(
             clone!(extract_widget, sender => move |_, _| {
-                match extract_widget.get_data() {
-                    (Some(file), Some(dir)) => {
-                        sender.send(Action::Extract { src_file: file, dest_dir: dir })
-                            .expect("Couldn't send data to the channel");
-                    },
-                    _ => {},
+                if let (Some(file), Some(dir)) = extract_widget.get_data() {
+                    sender.send(Action::Extract { src_file: file, dest_dir: dir })
+                        .expect("Couldn't send data to the channel");
                 }
             }),
         );
@@ -214,15 +211,12 @@ impl App {
         );
         create_widget.action.connect_activate(
             clone!(create_widget, sender => move |_, _| {
-                match create_widget.get_data() {
-                    (Some(src_dir), Some(location), Some(filename)) => {
-                        if let Some(name) = PathBuf::from(filename).file_name() {
-                            let dest_file = location.join(name);
-                            sender.send(Action::Create { src_dir, dest_file })
-                                .expect("Couldn't send data to the channel");
-                        }
-                    },
-                    _ => {},
+                if let (Some(src_dir), Some(location), Some(filename)) = create_widget.get_data() {
+                    if let Some(name) = PathBuf::from(filename).file_name() {
+                        let dest_file = location.join(name);
+                        sender.send(Action::Create { src_dir, dest_file })
+                            .expect("Couldn't send data to the channel");
+                    }
                 }
             }),
         );
