@@ -28,11 +28,14 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
 pub fn execute(matches: &ArgMatches) {
     let input = value_t!(matches, "file", String).unwrap();
     let paths = values_t!(matches, "paths", String).unwrap_or_default();
-    let paths = paths.iter().filter_map(|s| Pattern::new(s).ok()).collect();
+    let paths = paths
+        .iter()
+        .filter_map(|s| Pattern::new(s).ok())
+        .collect::<Vec<_>>();
 
     let walk = hpk::walk(input).unwrap();
 
-    fn matches_path(path: &Path, paths: &Vec<Pattern>) -> bool {
+    fn matches_path(path: &Path, paths: &[Pattern]) -> bool {
         if paths.is_empty() {
             return true;
         }
