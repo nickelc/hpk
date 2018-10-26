@@ -110,7 +110,7 @@ impl Header {
     }
 
     pub fn write(&self, w: &mut Write) -> HpkResult<()> {
-        w.write(&self._identifier)?;
+        w.write_all(&self._identifier)?;
         w.write_u32::<LE>(self.data_offset)?;
         w.write_u32::<LE>(self.fragments_per_file)?;
         w.write_u32::<LE>(self._unknown2)?;
@@ -263,7 +263,7 @@ impl DirEntry {
         w.write_u32::<LE>(_type)?;
         let name = self.path.file_name().unwrap().to_str().unwrap();
         w.write_u16::<LE>(name.len() as u16)?;
-        w.write(name.as_bytes())?;
+        w.write_all(name.as_bytes())?;
         Ok(())
     }
 }
