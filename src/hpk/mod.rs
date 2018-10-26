@@ -245,7 +245,7 @@ impl DirEntry {
         let name_length = r.read_u16::<LE>()?;
         let mut buf = vec![0; name_length as usize];
         r.read_exact(&mut buf)?;
-        let name = str::from_utf8(&buf).map_err(|e| HpkError::InvalidDirEntryName(e))?;
+        let name = str::from_utf8(&buf).map_err(HpkError::InvalidDirEntryName)?;
 
         Ok(DirEntry {
             path: parent.join(name),
@@ -644,7 +644,7 @@ where
         Compression::Lz4 => decompress::<compress::Lz4Block>(r.len(), r, w),
         Compression::Zlib => decompress::<compress::Zlib>(r.len(), r, w),
         Compression::Zstd => decompress::<compress::Zstd>(r.len(), r, w),
-        Compression::None => io::copy(r, w).map_err(|e| HpkError::Io(e)),
+        Compression::None => io::copy(r, w).map_err(HpkError::Io),
     }
 }
 
