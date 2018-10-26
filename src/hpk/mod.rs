@@ -101,11 +101,11 @@ impl Header {
             data_offset: r.read_u32::<LE>()?,
             fragments_per_file: r.read_u32::<LE>()?,
             _unknown2: r.read_u32::<LE>()?,
-            fragments_residual_offset: r.read_u32::<LE>()? as u64,
-            fragments_residual_count: r.read_u32::<LE>()? as u64,
+            fragments_residual_offset: u64::from(r.read_u32::<LE>()?),
+            fragments_residual_count: u64::from(r.read_u32::<LE>()?),
             _unknown5: r.read_u32::<LE>()?,
-            fragmented_filesystem_offset: r.read_u32::<LE>()? as u64,
-            fragmented_filesystem_length: r.read_u32::<LE>()? as u64,
+            fragmented_filesystem_offset: u64::from(r.read_u32::<LE>()?),
+            fragmented_filesystem_length: u64::from(r.read_u32::<LE>()?),
         })
     }
 
@@ -296,7 +296,7 @@ pub fn compress(options: &CompressOptions, r: &mut Read, w: &mut Write) -> HpkRe
 
     loop {
         let mut chunk = vec![];
-        let mut t = r.take(options.chunk_size as u64);
+        let mut t = r.take(u64::from(options.chunk_size));
 
         inflated_length += match io::copy(&mut t, &mut chunk) {
             Ok(0) => {
@@ -425,10 +425,10 @@ impl CompressionHeader {
         let chunk_size = r.read_u32::<LE>()?;
         let chunks = match r.read_u32::<LE>() {
             Ok(val) => {
-                let mut offsets = vec![val as u64];
+                let mut offsets = vec![u64::from(val)];
                 if offsets[0] != 16 {
                     for _ in 0..((offsets[0] - 16) / 4) {
-                        offsets.push(r.read_u32::<LE>()? as u64);
+                        offsets.push(u64::from(r.read_u32::<LE>()?));
                     }
                 }
                 let mut chunks = vec![
@@ -478,7 +478,7 @@ impl CompressionHeader {
             out.write_u32::<LE>(offset)?;
         }
 
-        Ok((HDR_SIZE + offsets_size) as u64)
+        Ok(u64::from(HDR_SIZE + offsets_size))
     }
 }
 
@@ -781,7 +781,7 @@ where
         }
     };
 
-    w.seek(SeekFrom::Start(HEADER_LENGTH as u64))?;
+    w.seek(SeekFrom::Start(u64::from(HEADER_LENGTH)))?;
     let mut filedates = vec![];
 
     for entry in walkdir {
