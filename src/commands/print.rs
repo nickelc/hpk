@@ -5,7 +5,7 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use hpk;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
-    #[cfg_attr(feature = "cargo-clippy", allow(needless_pass_by_value))]
+    #[allow(clippy::needless_pass_by_value)]
     fn validate_input(value: String) -> Result<(), String> {
         let path = Path::new(&value);
         match path.metadata() {
