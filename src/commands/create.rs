@@ -3,6 +3,7 @@ use std::fs;
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use hpk;
+use CliResult;
 
 arg_enum!{
     #[allow(non_camel_case_types)]
@@ -75,9 +76,9 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::from_usage("<file> 'hpk output file'"))
 }
 
-pub fn execute(matches: &ArgMatches) {
-    let input = value_t!(matches, "dir", String).unwrap();
-    let file = value_t!(matches, "file", String).unwrap();
+pub fn execute(matches: &ArgMatches) -> CliResult {
+    let input = value_t!(matches, "dir", String)?;
+    let file = value_t!(matches, "file", String)?;
 
     let mut options = hpk::CreateOptions::new();
     if matches.is_present("compress") {
@@ -102,5 +103,6 @@ pub fn execute(matches: &ArgMatches) {
         options.with_extensions(extensions);
     }
 
-    hpk::create(&options, input, file).unwrap();
+    hpk::create(&options, input, file)?;
+    Ok(())
 }

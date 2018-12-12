@@ -24,9 +24,13 @@ pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
     let (mut f, _tempdir) = {
         let mut f = File::open(&file)?;
 
-        if get_compression(&mut f).is_compressed() {
+        if get_compression(&mut f)?.is_compressed() {
             let tempdir = tempfile::Builder::new().prefix("hpk").tempdir()?;
-            let tmpfile = tempdir.path().join(file.file_name().unwrap());
+            let tmpfile = tempdir.path().join(
+                file.file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_else(|| "temp.hpk"),
+            );
 
             let fragment = Fragment::new(0, f.metadata()?.len());
             let mut r = FragmentedReader::new(&f, &[fragment]);

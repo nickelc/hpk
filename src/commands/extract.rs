@@ -5,6 +5,7 @@ use std::process;
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use hpk;
+use CliResult;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     #[allow(clippy::needless_pass_by_value)]
@@ -45,13 +46,9 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         ))
 }
 
-pub fn execute(matches: &ArgMatches) {
-    let input = value_t!(matches, "file", String)
-        .map(PathBuf::from)
-        .unwrap();
-    let dest = value_t!(matches, "dest", String)
-        .map(PathBuf::from)
-        .unwrap();
+pub fn execute(matches: &ArgMatches) -> CliResult {
+    let input = value_t!(matches, "file", String).map(PathBuf::from)?;
+    let dest = value_t!(matches, "dest", String).map(PathBuf::from)?;
     let force = matches.is_present("force");
     let verbose = matches.is_present("verbose");
 
@@ -71,5 +68,6 @@ pub fn execute(matches: &ArgMatches) {
     if matches.is_present("fix_lua") {
         options.fix_lua_files();
     }
-    hpk::extract(&options, input, dest).unwrap();
+    hpk::extract(&options, input, dest)?;
+    Ok(())
 }

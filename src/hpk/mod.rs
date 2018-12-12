@@ -45,7 +45,7 @@ type HpkResult<T> = Result<T, HpkError>;
 #[derive(Debug)]
 pub enum HpkError {
     InvalidHeader,
-    InvalidDirEntryName(str::Utf8Error),
+    InvalidDirEntryName,
     InvalidFragmentIndex,
     Io(io::Error),
     WalkDir(walkdir::Error),
@@ -245,7 +245,7 @@ impl DirEntry {
         let name_length = r.read_u16::<LE>()?;
         let mut buf = vec![0; name_length as usize];
         r.read_exact(&mut buf)?;
-        let name = str::from_utf8(&buf).map_err(HpkError::InvalidDirEntryName)?;
+        let name = str::from_utf8(&buf).map_err(|_| HpkError::InvalidDirEntryName)?;
 
         Ok(DirEntry {
             path: parent.join(name),
@@ -261,25 +261,26 @@ impl DirEntry {
         };
         w.write_u32::<LE>(index as u32)?;
         w.write_u32::<LE>(_type)?;
-        let name = self.path.file_name().unwrap().to_str().unwrap();
+        let name = self
+            .path
+            .file_name()
+            .and_then(|s| s.to_str())
+            .ok_or(HpkError::InvalidDirEntryName)?;
         w.write_u16::<LE>(name.len() as u16)?;
         w.write_all(name.as_bytes())?;
         Ok(())
     }
 }
 
-pub fn get_compression<T: Read + Seek>(r: &mut T) -> Compression {
-    let pos = r
-        .seek(SeekFrom::Current(0))
-        .expect("failed to get current position");
+pub fn get_compression<T: Read + Seek>(r: &mut T) -> HpkResult<Compression> {
+    let pos = r.seek(SeekFrom::Current(0))?;
     let compression = match Compression::read_from(r) {
         Ok(c) => c,
         Err(_) => Compression::None,
     };
-    r.seek(SeekFrom::Start(pos))
-        .expect("failed to seek to previous position");
+    r.seek(SeekFrom::Start(pos))?;
 
-    compression
+    Ok(compression)
 }
 
 /// Compresses the data with the encoder used
@@ -640,7 +641,7 @@ pub fn copy<W>(r: &mut FragmentedReader<&File>, w: &mut W) -> HpkResult<u64>
 where
     W: Write,
 {
-    match get_compression(r) {
+    match get_compression(r)? {
         Compression::Lz4 => decompress::<compress::Lz4Block>(r.len(), r, w),
         Compression::Zlib => decompress::<compress::Zlib>(r.len(), r, w),
         Compression::Zstd => decompress::<compress::Zstd>(r.len(), r, w),
@@ -774,7 +775,12 @@ where
     let (mut w, tmpfile, _tmpdir) = {
         if options.compress {
             let tempdir = tempfile::Builder::new().prefix("hpk").tempdir()?;
-            let tmpfile = tempdir.path().join(file.as_ref().file_name().unwrap());
+            let tmpfile = tempdir.path().join(
+                file.as_ref()
+                    .file_name()
+                    .and_then(|s| s.to_str())
+                    .unwrap_or_else(|| "temp.hpk"),
+            );
             (File::create(&tmpfile)?, Some(tmpfile), Some(tempdir))
         } else {
             (File::create(&file)?, None, None)

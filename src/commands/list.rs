@@ -7,6 +7,7 @@ use self::glob::Pattern;
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use hpk;
+use CliResult;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     #[allow(clippy::needless_pass_by_value)]
@@ -25,15 +26,15 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::from_usage("[paths]..."))
 }
 
-pub fn execute(matches: &ArgMatches) {
-    let input = value_t!(matches, "file", String).unwrap();
+pub fn execute(matches: &ArgMatches) -> CliResult {
+    let input = value_t!(matches, "file", String)?;
     let paths = values_t!(matches, "paths", String).unwrap_or_default();
     let paths = paths
         .iter()
         .filter_map(|s| Pattern::new(s).ok())
         .collect::<Vec<_>>();
 
-    let walk = hpk::walk(input).unwrap();
+    let walk = hpk::walk(input)?;
 
     fn matches_path(path: &Path, paths: &[Pattern]) -> bool {
         if paths.is_empty() {
@@ -57,4 +58,5 @@ pub fn execute(matches: &ArgMatches) {
             }
         }
     }
+    Ok(())
 }

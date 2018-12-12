@@ -3,6 +3,7 @@ use std::path::Path;
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use hpk;
+use CliResult;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     #[allow(clippy::needless_pass_by_value)]
@@ -24,9 +25,9 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         ))
 }
 
-pub fn execute(matches: &ArgMatches) {
-    let input = value_t!(matches, "file", String).unwrap();
-    let mut walk = hpk::walk(input).unwrap();
+pub fn execute(matches: &ArgMatches) -> CliResult {
+    let input = value_t!(matches, "file", String)?;
+    let mut walk = hpk::walk(input)?;
 
     println!("reading file: {}", walk.path().display());
     if walk.is_compressed() {
@@ -54,7 +55,7 @@ pub fn execute(matches: &ArgMatches) {
     println!("filesystem entries: {}", walk.header().filesystem_entries());
 
     if matches.is_present("header") {
-        return;
+        return Ok(());
     }
 
     println!("filesystem fragments:");
@@ -92,8 +93,8 @@ pub fn execute(matches: &ArgMatches) {
         walk.read_file(&dent, |mut r| {
             if r.len() == 0 {
                 println!(" empty file");
-            } else if hpk::get_compression(&mut r).is_compressed() {
-                let hdr = hpk::CompressionHeader::read_from(r.len(), &mut r).unwrap();
+            } else if hpk::get_compression(&mut r)?.is_compressed() {
+                let hdr = hpk::CompressionHeader::read_from(r.len(), &mut r)?;
                 println!(
                     " compressed: {} inflated_length={} chunk_size={} chunks={}",
                     hdr.compressor,
@@ -113,6 +114,7 @@ pub fn execute(matches: &ArgMatches) {
                 println!(" compressed: no");
             }
             Ok(())
-        }).unwrap();
+        })?;
     }
+    Ok(())
 }
