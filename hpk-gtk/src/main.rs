@@ -1,16 +1,15 @@
-use gio;
-use gtk;
-use hpk;
-use open;
-
 use std::path::Path;
 use std::path::PathBuf;
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 use std::time::Duration;
 
+use gio;
 use gio::prelude::*;
+use gtk;
 use gtk::prelude::*;
+use hpk;
+use open;
 
 macro_rules! clone {
     (@param _) => ( _ );

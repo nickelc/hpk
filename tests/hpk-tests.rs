@@ -46,7 +46,8 @@ fn create_extract_and_compress() {
 
     {
         let options = Default::default();
-        hpk::extract(&options, "test1.hpk", "test1-extracted").expect("could not extract test1.hpk");
+        hpk::extract(&options, "test1.hpk", "test1-extracted")
+            .expect("could not extract test1.hpk");
     }
 
     assert_path_exists!("test1-extracted");
@@ -65,7 +66,8 @@ fn create_extract_and_compress() {
             walk.read_file(&dent, |mut r| {
                 io::copy(&mut r, &mut io::sink()).unwrap();
                 Ok(())
-            }).unwrap();
+            })
+            .unwrap();
         }
     }
 
@@ -84,7 +86,8 @@ fn create_extract_and_compress() {
             walk.read_file(&dent, |mut r| {
                 io::copy(&mut r, &mut io::sink()).unwrap();
                 Ok(())
-            }).unwrap();
+            })
+            .unwrap();
         }
     }
 }

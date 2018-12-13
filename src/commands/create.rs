@@ -2,10 +2,10 @@ use std::fs;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
-use hpk;
 use crate::CliResult;
+use hpk;
 
-arg_enum!{
+arg_enum! {
     #[allow(non_camel_case_types)]
     #[derive(PartialEq, Debug)]
     enum FileDateFormat {

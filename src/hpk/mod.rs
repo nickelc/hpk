@@ -1,12 +1,3 @@
-
-use filetime;
-use flate2;
-
-use lz4_compress;
-use tempfile;
-use walkdir;
-
-
 use std::ffi::OsStr;
 use std::fs::File;
 use std::io;
@@ -17,7 +8,12 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
+use filetime;
+use flate2;
 use glob::Pattern;
+use lz4_compress;
+use tempfile;
+use walkdir;
 
 pub mod compress;
 mod lua;
@@ -320,7 +316,11 @@ pub fn compress(options: &CompressOptions, r: &mut dyn Read, w: &mut dyn Write) 
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
 
-fn decompress<T: compress::Decoder>(length: u64, r: &mut dyn Read, w: &mut dyn Write) -> HpkResult<u64> {
+fn decompress<T: compress::Decoder>(
+    length: u64,
+    r: &mut dyn Read,
+    w: &mut dyn Write,
+) -> HpkResult<u64> {
     let hdr = CompressionHeader::read_from(length, r)?;
     let mut written = 0;
     for chunk in &hdr.chunks {

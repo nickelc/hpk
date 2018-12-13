@@ -4,8 +4,8 @@ use std::process;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
-use hpk;
 use crate::CliResult;
+use hpk;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     #[allow(clippy::needless_pass_by_value)]
@@ -33,15 +33,19 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(
             Arg::from_usage("[paths]...")
                 .help("An optional list of archive members to be processed, separated by spaces."),
-        ).arg(
+        )
+        .arg(
             Arg::from_usage("[filedates] --ignore-filedates")
                 .help("Skip processing of a _filedates file and just extract it"),
-        ).arg(
+        )
+        .arg(
             Arg::from_usage("[fix_lua] --fix-lua-files")
                 .help("Fix the bytecode header of Surviving Mars' Lua files"),
-        ).arg(Arg::from_usage(
+        )
+        .arg(Arg::from_usage(
             "[force] --force 'Force extraction if destination folder is not empty'",
-        )).arg(Arg::from_usage(
+        ))
+        .arg(Arg::from_usage(
             "[verbose] -v 'Verbosely list files processed'",
         ))
 }

@@ -58,7 +58,8 @@ mod parser {
     );
 }
 
-pub type LuaHeaderRewriteReader<R> = LuaHeaderRewriter<R, fn(&mut R, &mut [u8]) -> io::Result<usize>>;
+pub type LuaHeaderRewriteReader<R> =
+    LuaHeaderRewriter<R, fn(&mut R, &mut [u8]) -> io::Result<usize>>;
 pub type LuaHeaderRewriteWriter<W> = LuaHeaderRewriter<W, fn(&mut W, &[u8]) -> io::Result<usize>>;
 
 pub struct LuaHeaderRewriter<T, F> {

@@ -28,11 +28,13 @@ impl<T: Read + Seek> FragmentedReader<T> {
                 length: f.length,
                 end_pos: 0,
                 limit: f.length,
-            }).scan(0, |state, mut f| {
+            })
+            .scan(0, |state, mut f| {
                 *state += f.length;
                 f.end_pos = *state;
                 Some(f)
-            }).collect();
+            })
+            .collect();
 
         let length = fragments.iter().map(|f| f.length).sum();
 

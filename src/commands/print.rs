@@ -2,8 +2,8 @@ use std::path::Path;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
-use hpk;
 use crate::CliResult;
+use hpk;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     #[allow(clippy::needless_pass_by_value)]
