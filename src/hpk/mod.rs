@@ -29,7 +29,7 @@ mod read;
 mod walk;
 
 pub use self::walk::walk;
-use read::FragmentedReader;
+use crate::read::FragmentedReader;
 
 const HPK_SIG: [u8; 4] = *b"BPUL";
 const HEADER_LENGTH: u8 = 36;
@@ -289,7 +289,7 @@ pub fn get_compression<T: Read + Seek>(r: &mut T) -> HpkResult<Compression> {
 /// it's the same behaviour as in a DLC file for Tropico 4
 ///
 pub fn compress(options: &CompressOptions, r: &mut Read, w: &mut Write) -> HpkResult<u64> {
-    use compress::Encoder;
+    use crate::compress::Encoder;
 
     let mut inflated_length = 0;
     let mut output_buffer = vec![];

@@ -3,7 +3,7 @@ use std::path::Path;
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use hpk;
-use CliResult;
+use crate::CliResult;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     #[allow(clippy::needless_pass_by_value)]

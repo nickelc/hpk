@@ -3,6 +3,7 @@ name = "hpk"
 version = "0.3.2"
 description = "HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran etc.)"
 authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
+edition = "2018"
 
 [features]
 lz4frame = ["lz4"]
