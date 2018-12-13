@@ -1,4 +1,4 @@
-extern crate glob;
+use glob;
 
 use std::fs;
 use std::path::Path;
@@ -26,7 +26,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::from_usage("[paths]..."))
 }
 
-pub fn execute(matches: &ArgMatches) -> CliResult {
+pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
     let input = value_t!(matches, "file", String)?;
     let paths = values_t!(matches, "paths", String).unwrap_or_default();
     let paths = paths

@@ -1,15 +1,11 @@
-extern crate byteorder;
-extern crate filetime;
-extern crate flate2;
-extern crate glob;
-#[cfg(feature = "lz4frame")]
-extern crate lz4;
-extern crate lz4_compress;
-#[macro_use]
-extern crate nom;
-extern crate tempfile;
-extern crate walkdir;
-extern crate zstd;
+
+use filetime;
+use flate2;
+
+use lz4_compress;
+use tempfile;
+use walkdir;
+
 
 use std::ffi::OsStr;
 use std::fs::File;
@@ -109,7 +105,7 @@ impl Header {
         })
     }
 
-    pub fn write(&self, w: &mut Write) -> HpkResult<()> {
+    pub fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
         w.write_all(&self._identifier)?;
         w.write_u32::<LE>(self.data_offset)?;
         w.write_u32::<LE>(self.fragments_per_file)?;
@@ -155,7 +151,7 @@ impl Fragment {
         Fragment { offset, length }
     }
 
-    pub fn write(&self, w: &mut Write) -> HpkResult<()> {
+    pub fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
         w.write_u32::<LE>(self.offset as u32)?;
         w.write_u32::<LE>(self.length as u32)?;
 
@@ -254,7 +250,7 @@ impl DirEntry {
         })
     }
 
-    pub fn write(&self, w: &mut Write) -> HpkResult<()> {
+    pub fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
         let (index, _type) = match self.ft {
             FileType::Dir(index) => (index, 1),
             FileType::File(index) => (index, 0),
@@ -288,7 +284,7 @@ pub fn get_compression<T: Read + Seek>(r: &mut T) -> HpkResult<Compression> {
 /// if no data is written at all the hpk compression header is written without any chunks
 /// it's the same behaviour as in a DLC file for Tropico 4
 ///
-pub fn compress(options: &CompressOptions, r: &mut Read, w: &mut Write) -> HpkResult<u64> {
+pub fn compress(options: &CompressOptions, r: &mut dyn Read, w: &mut dyn Write) -> HpkResult<u64> {
     use crate::compress::Encoder;
 
     let mut inflated_length = 0;
@@ -324,7 +320,7 @@ pub fn compress(options: &CompressOptions, r: &mut Read, w: &mut Write) -> HpkRe
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
 
-fn decompress<T: compress::Decoder>(length: u64, r: &mut Read, w: &mut Write) -> HpkResult<u64> {
+fn decompress<T: compress::Decoder>(length: u64, r: &mut dyn Read, w: &mut dyn Write) -> HpkResult<u64> {
     let hdr = CompressionHeader::read_from(length, r)?;
     let mut written = 0;
     for chunk in &hdr.chunks {
@@ -364,7 +360,7 @@ pub enum Compression {
 }
 
 impl std::fmt::Display for Compression {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> Result<(), std::fmt::Error> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> Result<(), std::fmt::Error> {
         match *self {
             Compression::Zlib => write!(f, "ZLIB"),
             Compression::Lz4 => write!(f, "LZ4"),
@@ -395,7 +391,7 @@ impl Compression {
         }
     }
 
-    fn write_identifier(&self, w: &mut Write) -> HpkResult<u64> {
+    fn write_identifier(&self, w: &mut dyn Write) -> HpkResult<u64> {
         match *self {
             Compression::Zlib => Ok(w.write(b"ZLIB")? as u64),
             Compression::Lz4 => Ok(w.write(b"LZ4 ")? as u64),
@@ -465,7 +461,7 @@ impl CompressionHeader {
         options: &CompressOptions,
         inflated_length: u32,
         offsets: &[u32],
-        out: &mut Write,
+        out: &mut dyn Write,
     ) -> HpkResult<u64> {
         const HDR_SIZE: u32 = 12;
 

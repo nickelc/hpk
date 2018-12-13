@@ -25,7 +25,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         ))
 }
 
-pub fn execute(matches: &ArgMatches) -> CliResult {
+pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
     let input = value_t!(matches, "file", String)?;
     let mut walk = hpk::walk(input)?;
 

@@ -76,7 +76,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::from_usage("<file> 'hpk output file'"))
 }
 
-pub fn execute(matches: &ArgMatches) -> CliResult {
+pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
     let input = value_t!(matches, "dir", String)?;
     let file = value_t!(matches, "file", String)?;
 

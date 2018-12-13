@@ -1,7 +1,7 @@
 #[macro_use]
 extern crate clap;
 
-extern crate hpk;
+use hpk;
 
 mod commands;
 

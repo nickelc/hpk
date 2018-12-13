@@ -1,5 +1,5 @@
-extern crate hpk;
-extern crate tempfile;
+use hpk;
+use tempfile;
 
 use std::env;
 use std::fs;

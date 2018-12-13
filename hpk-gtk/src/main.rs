@@ -1,7 +1,7 @@
-extern crate gio;
-extern crate gtk;
-extern crate hpk;
-extern crate open;
+use gio;
+use gtk;
+use hpk;
+use open;
 
 use std::path::Path;
 use std::path::PathBuf;

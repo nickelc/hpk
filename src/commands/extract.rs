@@ -46,7 +46,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         ))
 }
 
-pub fn execute(matches: &ArgMatches) -> CliResult {
+pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
     let input = value_t!(matches, "file", String).map(PathBuf::from)?;
     let dest = value_t!(matches, "dest", String).map(PathBuf::from)?;
     let force = matches.is_present("force");
