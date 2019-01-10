@@ -1,0 +1,50 @@
+language: rust
+sudo: false
+cache:
+  - apt
+  - cargo
+
+matrix:
+  include:
+    - os: linux
+      rust: stable
+      env: TARGET=x86_64-unknown-linux-gnu
+    - os: linux
+      rust: beta
+      env: TARGET=x86_64-unknown-linux-gnu
+    - os: linux
+      rust: nightly
+      env: TARGET=x86_64-unknown-linux-gnu
+    - os: osx
+      rust: stable
+      env:
+        - TARGET=x86_64-apple-darwin
+        - DEPLOY_RELEASE=1
+
+install: .travis/install.sh
+script:
+  - cargo build --all
+  - cargo test --all
+
+before_deploy:
+  - .travis/before_deploy.sh
+
+deploy:
+  - provider: releases
+    skip_cleanup: true
+    file_glob: true
+    file: deployment/${PROJECT_NAME}-${TRAVIS_TAG}-${TARGET}.tar.gz
+    body: "Automatically deployed release"
+    on:
+      condition: $DEPLOY_RELEASE = 1
+      tags: true
+    api_key: $GH_TOKEN
+
+env:
+  global:
+    - PROJECT_NAME: "hpk"
+    - secure: "MJNBU+hBXZ4j9lLc33wJ1dxqLjNp6trsK+AchGUzulr7zdrzTIxbZXNmlZoQZY7VXFZAnP8QM1XjaWe6Ak77gpyes4uNAO2Qv4Ed9k4wQAGoXcYJuCVvlDJkS9nbPhM3Md5PbCzh593wim3eCnKM9VCjc8q3E2qKn5WSwyQNuX2eQmib2DwcRMFFAxwrUQ736QL01v7pa/jYNep1Vij85g0op9j9QJcek6N7NolisNCA4oZZkbrliChlP/QPHd0T/Ot8gPBpAJFaAUn2GmC+4Cg6F+voiYkCTA0+vGDWT/sW940KQo2wKnzig/UxQ5cS7QgU0hxZX3Nj8w5lOI073KD3gUhtydCQgTLCxc/xz7MYdhXhSInGj3wimFtcXv8S3ZdVaFLZRrr+q6Q1naegc9DJ98c82NGRQhgcthnb8DkfqTj3IJUyvGwvN6UzrlEvwkHJDIhgFpZuVHKIu1LYBABj7t2fCaiwmccAiC60ffrSHOMO5BnCSoCLtulqbkxHZjStePH7fJNyJxrkj1MU6aCasqkMyv+uwANHVKcju/0/m4xQoos5eaUp9c2B9Ththpw8VTivRsKSbge/xzOnIea1R3cp3Pl3UW6QkPMvOkZkeuwL5++Y9t9k7HvQrL3kvpQGG1wxoWAU2VTC4jknfUUSDBKDkcf4mcdAmVtTiJc="
+
+notifications:
+  email:
+    on_success: never
