@@ -1,6 +1,9 @@
 # HPK Archiver for Haemimont Engine game files
+[![Linux build status][travis-badge]][travis-url]
 [![Window build status][appveyor-badge]][appveyor-url]
 
+[travis-badge]: https://travis-ci.org/nickelc/hpk.svg
+[travis-url]: https://travis-ci.org/nickelc/hpk
 [appveyor-badge]: https://ci.appveyor.com/api/projects/status/github/nickelc/hpk?svg=true
 [appveyor-url]: https://ci.appveyor.com/project/nickelc/hpk
 
