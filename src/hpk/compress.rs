@@ -2,10 +2,6 @@ use std::io;
 use std::io::prelude::*;
 use std::io::Cursor;
 
-use flate2;
-#[cfg(feature = "lz4frame")]
-use lz4;
-use lz4_compress;
 use zstd::stream::Decoder as ZstdDecoder;
 
 pub trait Decoder {

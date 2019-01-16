@@ -8,12 +8,7 @@ use std::path::{Path, PathBuf};
 use std::str;
 
 use byteorder::{ReadBytesExt, WriteBytesExt, LE};
-use filetime;
-use flate2;
 use glob::Pattern;
-use lz4_compress;
-use tempfile;
-use walkdir;
 
 pub mod compress;
 mod lua;

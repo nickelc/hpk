@@ -5,10 +5,9 @@ use std::io::SeekFrom;
 use std::path::Path;
 use std::path::PathBuf;
 
-use tempfile;
-
-use super::read::FragmentedReader;
-use super::*;
+use crate::read::FragmentedReader;
+use crate::{copy, get_compression};
+use crate::{DirEntry, Fragment, Header, HpkResult};
 
 macro_rules! itry {
     ($e:expr) => {

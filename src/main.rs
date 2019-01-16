@@ -1,8 +1,6 @@
 #[macro_use]
 extern crate clap;
 
-use hpk;
-
 mod commands;
 
 use clap::{App, AppSettings};
