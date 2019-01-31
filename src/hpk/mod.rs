@@ -15,8 +15,8 @@ mod lua;
 mod read;
 mod walk;
 
-pub use self::walk::walk;
-use crate::read::FragmentedReader;
+pub use crate::read::FragmentedReader;
+pub use crate::walk::{walk, HpkIter};
 
 const HPK_SIG: [u8; 4] = *b"BPUL";
 const HEADER_LENGTH: u8 = 36;
@@ -63,7 +63,7 @@ pub struct Header {
 }
 
 impl Header {
-    pub fn new(fragmented_filesystem_offset: u64, fragmented_filesystem_length: u64) -> Header {
+    fn new(fragmented_filesystem_offset: u64, fragmented_filesystem_length: u64) -> Header {
         Header {
             _identifier: HPK_SIG,
             data_offset: 36,
@@ -77,7 +77,7 @@ impl Header {
         }
     }
 
-    pub fn read_from<T: Read>(mut r: T) -> HpkResult<Self> {
+    fn read_from<T: Read>(mut r: T) -> HpkResult<Self> {
         let mut sig = [0; 4];
         r.read_exact(&mut sig)?;
         if !sig.eq(&HPK_SIG) {
@@ -96,7 +96,7 @@ impl Header {
         })
     }
 
-    pub fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
+    fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
         w.write_all(&self._identifier)?;
         w.write_u32::<LE>(self.data_offset)?;
         w.write_u32::<LE>(self.fragments_per_file)?;
@@ -124,13 +124,13 @@ pub struct Fragment {
 }
 
 impl Fragment {
-    pub fn read_from<T: Read>(mut r: T) -> HpkResult<Fragment> {
+    fn read_from<T: Read>(mut r: T) -> HpkResult<Fragment> {
         let offset = u64::from(r.read_u32::<LE>()?);
         let length = u64::from(r.read_u32::<LE>()?);
         Ok(Fragment { offset, length })
     }
 
-    pub fn read_nth_from<T: Read>(n: usize, mut r: T) -> HpkResult<Vec<Fragment>> {
+    fn read_nth_from<T: Read>(n: usize, mut r: T) -> HpkResult<Vec<Fragment>> {
         let mut fragments = Vec::with_capacity(n);
         for _ in 0..n {
             fragments.push(Fragment::read_from(&mut r)?);
@@ -138,11 +138,11 @@ impl Fragment {
         Ok(fragments)
     }
 
-    pub fn new(offset: u64, length: u64) -> Fragment {
+    fn new(offset: u64, length: u64) -> Fragment {
         Fragment { offset, length }
     }
 
-    pub fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
+    fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
         w.write_u32::<LE>(self.offset as u32)?;
         w.write_u32::<LE>(self.length as u32)?;
 
@@ -199,7 +199,7 @@ impl DirEntry {
         }
     }
 
-    pub fn new_dir<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
+    fn new_dir<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
         DirEntry {
             path: path.as_ref().to_path_buf(),
             ft: FileType::Dir(index),
@@ -207,7 +207,7 @@ impl DirEntry {
         }
     }
 
-    pub fn new_file<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
+    fn new_file<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
         DirEntry {
             path: path.as_ref().to_path_buf(),
             ft: FileType::File(index),
@@ -241,7 +241,7 @@ impl DirEntry {
         })
     }
 
-    pub fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
+    fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
         let (index, _type) = match self.ft {
             FileType::Dir(index) => (index, 1),
             FileType::File(index) => (index, 0),
@@ -452,7 +452,7 @@ impl CompressionHeader {
         })
     }
 
-    pub fn write(
+    fn write(
         options: &CompressOptions,
         inflated_length: u32,
         offsets: &[u32],
