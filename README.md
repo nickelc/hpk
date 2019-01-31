@@ -1,7 +1,12 @@
 # HPK Archiver for Haemimont Engine game files
+
+![Rust version][rust-version]
+![Rust edition][rust-edition]
 [![Linux build status][travis-badge]][travis-url]
 [![Window build status][appveyor-badge]][appveyor-url]
 
+[rust-version]: https://img.shields.io/badge/rust-1.31%2B-blue.svg
+[rust-edition]: https://img.shields.io/badge/edition-2018-red.svg
 [travis-badge]: https://travis-ci.org/nickelc/hpk.svg
 [travis-url]: https://travis-ci.org/nickelc/hpk
 [appveyor-badge]: https://ci.appveyor.com/api/projects/status/github/nickelc/hpk?svg=true
