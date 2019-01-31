@@ -1,7 +1,8 @@
 [package]
 name = "hpk"
-version = "0.3.2"
+version = "0.3.3"
 description = "HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran etc.)"
+repository = "https://github.com/nickelc/hpk"
 authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 edition = "2018"
 
