@@ -54,8 +54,7 @@ hpk 0.3.0
 
 ### Cargo
 ```bash
-$ git clone https://github.com/nickelc/hpk.git
-$ cargo install --path hpk
+$ cargo install hpk
 ```
 
 ### Windows
