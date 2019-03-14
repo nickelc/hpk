@@ -1,16 +1,23 @@
 # HPK Archiver for Haemimont Engine game files
 
+[![Crates.io][crates-badge]][crates-url]
 ![Rust version][rust-version]
 ![Rust edition][rust-edition]
 [![Linux build status][travis-badge]][travis-url]
 [![Window build status][appveyor-badge]][appveyor-url]
 
+[crates-badge]: https://img.shields.io/crates/v/hpk.svg
+[crates-url]: https://crates.io/crates/hpk
 [rust-version]: https://img.shields.io/badge/rust-1.31%2B-blue.svg
 [rust-edition]: https://img.shields.io/badge/edition-2018-red.svg
 [travis-badge]: https://travis-ci.org/nickelc/hpk.svg
 [travis-url]: https://travis-ci.org/nickelc/hpk
 [appveyor-badge]: https://ci.appveyor.com/api/projects/status/github/nickelc/hpk?svg=true
 [appveyor-url]: https://ci.appveyor.com/project/nickelc/hpk
+
+[lua-url]: https://www.lua.org
+[unluac-url]: https://sourceforge.net/projects/unluac
+[luadec-url]: https://github.com/viruscamp/luadec
 
 ## Supported games
 * Tropico 3-5
@@ -20,10 +27,9 @@
 * Surviving Mars
 
 ## Game Scripting
-Haeminont uses [Lua](https://www.lua.org/) for scripting their games.
+Haeminont uses [Lua][lua-url] for scripting their games.
 The scripts contain only the compiled Lua bytecode and have to be decompiled
-with [unluac](https://sourceforge.net/projects/unluac/)
-or [luadec](https://github.com/viruscamp/luadec) to get the source code.
+with [unluac][unluac-url] or [luadec][luadec-url] to get the source code.
 With Surviving Mars they switched from Lua `5.1` to `5.3` but the bytecode
 headers are missing two bytes to make it possible to decompile the scripts.
 
