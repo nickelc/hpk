@@ -55,7 +55,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
                 .next_line_help(true)
                 .validator(validate_chunk_size))
         .arg(Arg::from_usage("[cripple_lua] --cripple-lua-files")
-                .help("Cripple bytecode header for Surviving Mars")
+                .help("Cripple bytecode header for Victor Vran or Surviving Mars")
         )
         .arg(Arg::from_usage(
             "[filedates] --with-filedates 'Stores the last modification times in a _filedates file'",

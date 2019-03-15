@@ -40,7 +40,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         )
         .arg(
             Arg::from_usage("[fix_lua] --fix-lua-files")
-                .help("Fix the bytecode header of Surviving Mars' Lua files"),
+                .help("Fix the bytecode header of Victor Vran's or Surviving Mars' Lua files"),
         )
         .arg(Arg::from_usage(
             "[force] --force 'Force extraction if destination folder is not empty'",
