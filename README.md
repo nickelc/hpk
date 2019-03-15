@@ -30,8 +30,13 @@
 Haeminont uses [Lua][lua-url] for scripting their games.
 The scripts contain only the compiled Lua bytecode and have to be decompiled
 with [unluac][unluac-url] or [luadec][luadec-url] to get the source code.
-With Surviving Mars they switched from Lua `5.1` to `5.3` but the bytecode
+With Victor Vran they switched from Lua `5.1` to `5.3` but the bytecode
 headers are missing two bytes to make it possible to decompile the scripts.
+
+|        | Victor Vran's Lua Bytecode Header                       |
+|--------|---------------------------------------------------------|
+| Broken | `1B4C 7561 5300 1993 0D0A 1A0A 0404 ____ 0878 5600 ...` |
+| Valid  | `1B4C 7561 5300 1993 0D0A 1A0A 0404 0404 0878 5600 ...` |
 
 |        | Surviving Mars' Lua Bytecode Header                     |
 |--------|---------------------------------------------------------|
