@@ -42,9 +42,10 @@ const LUAC_NUM: f64 = 370.5;
 
 mod parser {
     use super::*;
+    use nom::number::streaming::{le_f64, le_u32, le_u64};
     use nom::*;
 
-    #[derive(Debug, PartialEq)]
+    #[derive(Debug, Clone, PartialEq)]
     pub enum Bits {
         Int32,
         Int64,
@@ -57,20 +58,20 @@ mod parser {
     named!(luac_invalid_sizeof, take!(3));
     named!(
         luac_int32<Bits>,
-        value!(Bits::Int32, verify!(le_u32, |val| val == LUAC_INT32))
+        value!(Bits::Int32, verify!(le_u32, |val| *val == LUAC_INT32))
     );
     named!(
         luac_int64<Bits>,
-        value!(Bits::Int64, verify!(le_u64, |val| val == LUAC_INT64))
+        value!(Bits::Int64, verify!(le_u64, |val| *val == LUAC_INT64))
     );
-    named!(luac_num<f64>, verify!(le_f64, |val| val == LUAC_NUM));
+    named!(luac_num<f64>, verify!(le_f64, |val| *val == LUAC_NUM));
     named!(pub check_invalid_header<Bits>,
         do_parse!(
             lua_sig
         >>  lua_version53_fmt
         >>  luac_data
         >>  luac_invalid_sizeof
-        >>  bits: alt_complete!(
+        >>  bits: alt!(
                 do_parse!(
                     bits: luac_int32    >>
                     luac_num            >>
@@ -91,7 +92,7 @@ mod parser {
         >>  lua_version53_fmt
         >>  luac_data
         >>  luac_valid_sizeof
-        >>  bits: alt_complete!(
+        >>  bits: alt!(
                 do_parse!(
                     bits: luac_int32    >>
                     luac_num            >>
