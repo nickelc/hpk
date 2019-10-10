@@ -6,6 +6,7 @@ use std::time::Duration;
 
 use gio;
 use gio::prelude::*;
+use glib::GString;
 use gtk;
 use gtk::prelude::*;
 use hpk;
@@ -81,7 +82,7 @@ struct CreateWidget {
 }
 
 impl CreateWidget {
-    fn get_data(&self) -> (Option<PathBuf>, Option<PathBuf>, Option<String>) {
+    fn get_data(&self) -> (Option<PathBuf>, Option<PathBuf>, Option<GString>) {
         (
             self.src_dir.get_filename(),
             self.dest_dir.get_filename(),
@@ -92,7 +93,7 @@ impl CreateWidget {
 
 impl App {
     fn new() -> App {
-        let application = gtk::Application::new("org.hpk", gio::ApplicationFlags::empty())
+        let application = gtk::Application::new(Some("org.hpk"), gio::ApplicationFlags::empty())
             .expect("Initialization failed...");
 
         let builder = gtk::Builder::new_from_string(include_str!("hpk.ui"));
@@ -117,8 +118,8 @@ impl App {
         // setup: FileFilters {{{
         let all_filter = gtk::FileFilter::new();
         let hpk_filter = gtk::FileFilter::new();
-        FileFilterExt::set_name(&all_filter, "All Files");
-        FileFilterExt::set_name(&hpk_filter, "HPK Files");
+        all_filter.set_name(Some("All Files"));
+        hpk_filter.set_name(Some("HPK Files"));
         all_filter.add_pattern("*");
         hpk_filter.add_pattern("*.hpk");
 
@@ -214,7 +215,7 @@ impl App {
             .action
             .connect_activate(clone!(create_widget, sender => move |_, _| {
                 if let (Some(src_dir), Some(location), Some(filename)) = create_widget.get_data() {
-                    if let Some(name) = PathBuf::from(filename).file_name() {
+                    if let Some(name) = PathBuf::from(filename.as_str()).file_name() {
                         let dest_file = location.join(name);
                         sender.send(Action::Create { src_dir, dest_file })
                             .expect("Couldn't send data to the channel");
@@ -315,7 +316,7 @@ fn open_extraction_completed_dialog(window: &gtk::ApplicationWindow, dest_dir: &
         &[("Close", 0), ("Show the Files", 1)],
         0,
     );
-    if dialog.run() == 1 {
+    if dialog.run() == gtk::ResponseType::Other(1) {
         show_folder(dest_dir);
     }
     dialog.close();
@@ -328,7 +329,7 @@ fn open_created_successfully_dialog(window: &gtk::ApplicationWindow, dest_file: 
         &[("Close", 0), ("Show Location", 1)],
         0,
     );
-    if dialog.run() == 1 {
+    if dialog.run() == gtk::ResponseType::Other(1) {
         show_folder(dest_file.parent().unwrap());
     }
     dialog.close();
@@ -337,8 +338,8 @@ fn open_created_successfully_dialog(window: &gtk::ApplicationWindow, dest_file: 
 fn new_dialog(
     window: &gtk::ApplicationWindow,
     title: &str,
-    buttons: &[(&str, i32)],
-    default_response: i32,
+    buttons: &[(&str, u16)],
+    default_response: u16,
 ) -> gtk::MessageDialog {
     let dialog = gtk::MessageDialog::new(
         Some(window),
@@ -348,9 +349,9 @@ fn new_dialog(
         title,
     );
     for btn in buttons {
-        dialog.add_button(btn.0, btn.1);
+        dialog.add_button(btn.0, gtk::ResponseType::Other(btn.1));
     }
-    dialog.set_default_response(default_response);
+    dialog.set_default_response(gtk::ResponseType::Other(default_response));
 
     dialog
 }
@@ -380,7 +381,7 @@ fn new_progress_dialog(parent: &gtk::ApplicationWindow) -> gtk::MessageDialog {
 
 fn show_folder<P: AsRef<Path>>(dir: P) {
     let file = gio::File::new_for_path(dir);
-    open::that(&file.get_uri().unwrap()).expect("Failed to show folder");
+    open::that(&file.get_uri()).expect("Failed to show folder");
 }
 
 fn main() {
