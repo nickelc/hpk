@@ -14,7 +14,7 @@ open="1"
 path=".."
 
 [dependencies.gtk]
-features=["v3_24"]
+features=["v3_22"]
 version="0.7"
 
 [profile.release]

@@ -1,0 +1,120 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - v*
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Fetch
+        uses: actions-rs/cargo@v1
+        with:
+          command: fetch
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --tests
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+
+  build:
+    name: Build ${{ matrix.target }}
+    needs: [test]
+
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-musl
+            bin: hpk
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            bin: hpk.exe
+          - os: macOS-latest
+            target: x86_64-apple-darwin
+            bin: hpk
+
+    runs-on: ${{ matrix.os }}
+
+    steps:
+      - name: Install rust
+        uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          target: ${{ matrix.target }}
+          override: true
+
+      - name: Install musl tools
+        if: matrix.os == 'ubuntu-latest'
+        run: |
+          sudo apt-get install -y musl-tools
+
+      - name: Checkout
+        uses: actions/checkout@v1
+
+      - name: Fetch
+        uses: actions-rs/cargo@v1
+        with:
+          command: fetch
+          args: --target ${{ matrix.target }}
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --target ${{ matrix.target }}
+
+      - name: Package
+        id: package
+        shell: bash -e {0}
+        run: |
+          name=hpk
+          tag=$(git describe --tags --abbrev=0)
+          release_name="$name-$tag-${{ matrix.target }}"
+          release_tar="${release_name}.tar.gz"
+          mkdir "$release_name"
+
+          if [ "${{ matrix.target }}" != "x86_64-pc-windows-msvc" ]; then
+              strip "target/${{ matrix.target }}/release/${{ matrix.bin }}"
+          fi
+
+          cp target/${{ matrix.target }}/release/${{ matrix.bin }} "$release_name"
+          cp README.md LICENSE "$release_name"
+          tar czvf "$release_tar" "$release_name"
+
+          if [ "${{ matrix.os }}" == "windows-latest" ]; then
+            echo "(Get-FileHash \"${release_tar}\" -Algorithm SHA256).Hash | Out-File -Encoding ASCII -NoNewline \"${release_tar}.sha256\"" | pwsh -c -
+          else
+            echo -n "$(shasum -ba 256 "${release_tar}" | cut -d " " -f 1)" > "${release_tar}.sha256"
+          fi
+
+      - name: Publish
+        uses: softprops/action-gh-release@v1
+        with:
+          body: 'Automatically deployed release'
+          # draft: true
+          files: 'hpk*'
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
