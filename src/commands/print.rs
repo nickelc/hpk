@@ -91,7 +91,7 @@ pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
             fragment.offset, fragment.length
         );
         walk.read_file(&dent, |mut r| {
-            if r.len() == 0 {
+            if r.is_empty() {
                 println!(" empty file");
             } else if hpk::get_compression(&mut r)?.is_compressed() {
                 let hdr = hpk::CompressionHeader::read_from(r.len(), &mut r)?;

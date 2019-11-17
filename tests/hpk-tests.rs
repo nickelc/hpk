@@ -33,7 +33,10 @@ fn create_extract_and_compress() {
     create_dir("test1");
     create_file("test1/script32.lua", Some(include_bytes!("broken32.lua")));
     create_file("test1/script64.lua", Some(include_bytes!("broken64.lua")));
-    create_file("test1/compressed.lst", Some("Hello World, Hello World".as_bytes()));
+    create_file(
+        "test1/compressed.lst",
+        Some("Hello World, Hello World".as_bytes()),
+    );
     create_file("test1/empty_compressed.lst", None);
     create_file("test1/empty_file", None);
     create_dir("test1/empty_folder");
@@ -63,12 +66,10 @@ fn create_extract_and_compress() {
     assert_path_exists!("test1-extracted/folder/six_bytes");
     assert_path_exists!("test1-extracted/two_bytes");
 
-    let _ = fs::read("lua-extracted/script32.lua").map(|c| {
-        assert_eq!(c, &include_bytes!("valid32.lua")[..])
-    });
-    let _ = fs::read("lua-extracted/script64.lua").map(|c| {
-        assert_eq!(c, &include_bytes!("valid64.lua")[..])
-    });
+    let _ = fs::read("lua-extracted/script32.lua")
+        .map(|c| assert_eq!(c, &include_bytes!("valid32.lua")[..]));
+    let _ = fs::read("lua-extracted/script64.lua")
+        .map(|c| assert_eq!(c, &include_bytes!("valid64.lua")[..]));
 
     let mut walk = hpk::walk("test1.hpk").unwrap();
     assert!(!walk.is_compressed());

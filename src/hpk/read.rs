@@ -70,6 +70,10 @@ impl<T: Read + Seek> FragmentedReader<T> {
         self.length
     }
 
+    pub fn is_empty(&self) -> bool {
+        self.length == 0
+    }
+
     /// Used for tests
     #[allow(dead_code)]
     fn into_inner(self) -> T {
