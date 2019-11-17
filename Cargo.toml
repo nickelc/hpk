@@ -30,7 +30,7 @@ lz4-compress="0.1"
 nom="5"
 walkdir="2"
 tempfile="3"
-zstd = "0.4.22"
+zstd = "0.5"
 
 [dependencies.clap]
 default-features = false
