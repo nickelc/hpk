@@ -1,6 +1,6 @@
 [package]
 name = "hpk"
-version = "0.3.6"
+version = "0.3.7"
 description = "HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran, Surviving Mars etc.)"
 readme = "README.md"
 repository = "https://github.com/nickelc/hpk"
