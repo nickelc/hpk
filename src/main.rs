@@ -29,6 +29,7 @@ fn main() -> CliResult {
     let matches = App::new("hpk")
         .version(crate_version!())
         .about(crate_description!())
+        .after_help("https://github.com/nickelc/hpk")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(commands::create::clap())
         .subcommand(commands::extract::clap())
