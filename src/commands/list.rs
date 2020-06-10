@@ -1,13 +1,10 @@
-use glob;
-
 use std::fs;
 use std::path::Path;
 
-use self::glob::Pattern;
 use clap::{App, Arg, ArgMatches, SubCommand};
+use glob::Pattern;
 
 use crate::CliResult;
-use hpk;
 
 pub fn clap<'a, 'b>() -> App<'a, 'b> {
     #[allow(clippy::needless_pass_by_value)]

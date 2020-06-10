@@ -3,7 +3,6 @@ use std::fs;
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use crate::CliResult;
-use hpk;
 
 arg_enum! {
     #[allow(non_camel_case_types)]
