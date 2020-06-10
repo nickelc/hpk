@@ -1,9 +1,8 @@
 name: Release
 
 on:
-  push:
-    tags:
-      - v*
+  release:
+    types: [published]
 
 jobs:
   test:
@@ -19,18 +18,7 @@ jobs:
           override: true
 
       - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Fetch
-        uses: actions-rs/cargo@v1
-        with:
-          command: fetch
-
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --tests
+        uses: actions/checkout@v2
 
       - name: Test
         uses: actions-rs/cargo@v1
@@ -72,13 +60,7 @@ jobs:
           sudo apt-get install -y musl-tools
 
       - name: Checkout
-        uses: actions/checkout@v1
-
-      - name: Fetch
-        uses: actions-rs/cargo@v1
-        with:
-          command: fetch
-          args: --target ${{ matrix.target }}
+        uses: actions/checkout@v2
 
       - name: Build
         uses: actions-rs/cargo@v1
@@ -86,35 +68,53 @@ jobs:
           command: build
           args: --release --target ${{ matrix.target }}
 
+      - name: Strip release binary
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        run: strip "target/${{ matrix.target }}/release/hpk"
+
       - name: Package
         id: package
-        shell: bash -e {0}
+        shell: bash
         run: |
-          name=hpk
-          tag=$(git describe --tags --abbrev=0)
-          release_name="$name-$tag-${{ matrix.target }}"
-          release_tar="${release_name}.tar.gz"
-          mkdir "$release_name"
+          version=${GITHUB_REF#refs/tags/}
+          staging="hpk-$version-${{ matrix.target }}"
+          mkdir -p "$staging"
 
-          if [ "${{ matrix.target }}" != "x86_64-pc-windows-msvc" ]; then
-              strip "target/${{ matrix.target }}/release/${{ matrix.bin }}"
-          fi
+          cp {README.md,LICENSE} "$staging/"
+          if [ "${{ runner.os }}" = "Windows" ]; then
+            cp "target/${{ matrix.target }}/release/hpk.exe" "$staging/"
+            7z a "$staging.zip" "$staging"
 
-          cp target/${{ matrix.target }}/release/${{ matrix.bin }} "$release_name"
-          cp README.md LICENSE "$release_name"
-          tar czvf "$release_tar" "$release_name"
+            echo "(Get-FileHash \"$staging.zip\" -Algorithm SHA256).Hash | Out-File -Encoding ASCII -NoNewline \"$staging.zip.sha256\"" | pwsh -c -
 
-          if [ "${{ matrix.os }}" == "windows-latest" ]; then
-            echo "(Get-FileHash \"${release_tar}\" -Algorithm SHA256).Hash | Out-File -Encoding ASCII -NoNewline \"${release_tar}.sha256\"" | pwsh -c -
+            echo "::set-env name=ASSET::$staging.zip"
+            echo "::set-env name=ASSET_CHK::$staging.zip.sha256"
           else
-            echo -n "$(shasum -ba 256 "${release_tar}" | cut -d " " -f 1)" > "${release_tar}.sha256"
+            cp "target/${{ matrix.target }}/release/hpk" "$staging/"
+            tar czf "$staging.tar.gz"  "$staging"
+
+            echo -n "$(shasum -ba 256 "$staging.tar.gz" | cut -d " " -f 1)" > "$staging.tar.gz.sha256"
+
+            echo "::set-env name=ASSET::$staging.tar.gz"
+            echo "::set-env name=ASSET_CHK::$staging.tar.gz.sha256"
           fi
 
-      - name: Publish
-        uses: softprops/action-gh-release@v1
-        with:
-          body: 'Automatically deployed release'
-          # draft: true
-          files: 'hpk*'
+      - name: Upload package
+        uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_name: ${{ env.ASSET }}
+          asset_path: ${{ env.ASSET }}
+          asset_content_type: application/octet-stream
+
+      - name: Upload package checksum
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ github.event.release.upload_url }}
+          asset_name: ${{ env.ASSET_CHK }}
+          asset_path: ${{ env.ASSET_CHK }}
+          asset_content_type: application/octet-stream
