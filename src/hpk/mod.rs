@@ -184,11 +184,7 @@ impl DirEntry {
     }
 
     pub fn is_dir(&self) -> bool {
-        if let FileType::Dir(_) = self.ft {
-            true
-        } else {
-            false
-        }
+        std::matches!(self.ft, FileType::Dir(_))
     }
 
     fn new_root() -> Self {
@@ -367,10 +363,7 @@ impl std::fmt::Display for Compression {
 
 impl Compression {
     pub fn is_compressed(&self) -> bool {
-        match *self {
-            Compression::None => false,
-            _ => true,
-        }
+        !std::matches!(*self, Compression::None)
     }
 
     fn read_from<T: Read + ?Sized>(r: &mut T) -> HpkResult<Self> {
