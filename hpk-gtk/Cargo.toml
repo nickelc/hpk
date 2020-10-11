@@ -6,8 +6,8 @@ authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-gio="0.8"
-glib = "0.9"
+gio="0.9"
+glib = "0.10"
 open="1"
 
 [dependencies.hpk]
@@ -15,7 +15,7 @@ path=".."
 
 [dependencies.gtk]
 features=["v3_22"]
-version="0.8"
+version="0.9"
 
 [profile.release]
 lto=true

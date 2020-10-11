@@ -86,17 +86,18 @@ impl CreateWidget {
         (
             self.src_dir.get_filename(),
             self.dest_dir.get_filename(),
-            self.filename.get_text(),
+            Some(self.filename.get_text()),
         )
     }
 }
 
 impl App {
     fn new() -> App {
+        gtk::init().expect("Failed to init GTK");
         let application = gtk::Application::new(Some("org.hpk"), gio::ApplicationFlags::empty())
             .expect("Initialization failed...");
 
-        let builder = gtk::Builder::new_from_string(include_str!("hpk.ui"));
+        let builder = gtk::Builder::from_string(include_str!("hpk.ui"));
 
         let extract_widget = ExtractWidget {
             src_file: get_widget!(builder, "src_file"),
@@ -260,7 +261,7 @@ impl App {
 
         let sender = self.sender;
         let receiver = self.receiver;
-        gtk::idle_add(move || {
+        glib::idle_add_local(move || {
             match receiver.recv_timeout(Duration::from_millis(100)) {
                 Ok(Action::Extract { src_file, dest_dir }) => {
                     dialog.present();
