@@ -21,9 +21,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo test
 
   build:
     name: Build ${{ matrix.target }}
@@ -63,10 +61,7 @@ jobs:
         uses: actions/checkout@v2
 
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --target ${{ matrix.target }}
+        run: cargo build --release --target ${{ matrix.target }}
 
       - name: Strip release binary
         if: runner.os == 'Linux' || runner.os == 'macOS'

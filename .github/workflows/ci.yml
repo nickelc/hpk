@@ -26,10 +26,7 @@ jobs:
           args: --all-features -- -D warnings
 
       - name: Run rustfmt
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo fmt --all -- --check
 
   build_and_test:
     name: Build and test
@@ -52,15 +49,10 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Fetch
-        uses: actions-rs/cargo@v1
-        with:
-          command: fetch
+        run: cargo fetch
 
       - name: Test
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-          args: --all-features
+        run: cargo test --all-features
 
   hpk-gtk:
     name: Check hpk-gtk
@@ -82,10 +74,7 @@ jobs:
         uses: actions/checkout@v1
 
       - name: Check hpk-gtk
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --manifest-path hpk-gtk/Cargo.toml
+        run: cargo check --manifest-path hpk-gtk/Cargo.toml
 
   nightly:
     name: Check nightly
@@ -103,6 +92,4 @@ jobs:
           override: true
 
       - name: Check hpk
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
+        run: cargo check
