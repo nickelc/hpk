@@ -21,6 +21,18 @@
 * Victor Vran
 * Surviving Mars
 
+## Overview
+1. [Game Scripting](#game-scripting)
+2. [Building](#building)
+3. [Installation](#installation)
+4. [Usage](#usage)
+    1. [`hpk help`](#hpk-help)
+    2. [`hpk list`](#hpk-list)
+    3. [`hpk create`](#hpk-create)
+    4. [`hpk extract`](#hpk-extract)
+    5. [`hpk print`](#hpk-print)
+ 5. [HPK File Format](#hpk-file-format)
+
 ## Game Scripting
 Haeminont uses [Lua][lua-url] for scripting their games.
 The scripts contain only the compiled Lua bytecode and have to be decompiled
