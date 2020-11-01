@@ -27,10 +27,13 @@ filetime = "0.2"
 flate2 = "1"
 glob="0.3"
 lz4-compress="0.1"
-nom="5"
 walkdir="2"
 tempfile="3"
 zstd = "0.5"
+
+[dependencies.nom]
+version = "6"
+default-features = false
 
 [dependencies.clap]
 default-features = false
