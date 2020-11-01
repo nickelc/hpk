@@ -28,7 +28,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
             let tmpfile = tempdir.path().join(
                 file.file_name()
                     .and_then(|s| s.to_str())
-                    .unwrap_or_else(|| "temp.hpk"),
+                    .unwrap_or("temp.hpk"),
             );
 
             let fragment = Fragment::new(0, f.metadata()?.len());

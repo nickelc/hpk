@@ -763,7 +763,7 @@ where
                 file.as_ref()
                     .file_name()
                     .and_then(|s| s.to_str())
-                    .unwrap_or_else(|| "temp.hpk"),
+                    .unwrap_or("temp.hpk"),
             );
             (File::create(&tmpfile)?, Some(tmpfile), Some(tempdir))
         } else {
