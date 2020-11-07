@@ -11,11 +11,7 @@ jobs:
 
     steps:
       - name: Install rust
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+        uses: hecrj/setup-rust-action@v1
 
       - name: Checkout
         uses: actions/checkout@v2
@@ -45,12 +41,9 @@ jobs:
 
     steps:
       - name: Install rust
-        uses: actions-rs/toolchain@v1
+        uses: hecrj/setup-rust-action@v1
         with:
-          profile: minimal
-          toolchain: stable
-          target: ${{ matrix.target }}
-          override: true
+          targets: ${{ matrix.target }}
 
       - name: Install musl tools
         if: matrix.os == 'ubuntu-latest'
