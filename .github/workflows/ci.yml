@@ -2,6 +2,9 @@ name: ci
 
 on: [push, pull_request]
 
+env:
+  minrust: 1.42.0
+
 jobs:
   lint:
     name: Rustfmt and clippy
@@ -14,7 +17,7 @@ jobs:
           components: clippy, rustfmt
 
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Run clippy
         uses: actions-rs/clippy-check@v1
@@ -39,13 +42,29 @@ jobs:
         uses: hecrj/setup-rust-action@v1
 
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Fetch
         run: cargo fetch
 
       - name: Test
         run: cargo test --all-features
+
+  minrust:
+    name: MSRV
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install rust
+        uses: hecrj/setup-rust-action@v1
+        with:
+          rust-version: ${{ env.minrust }}
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Check
+        run: cargo check --verbose
 
   hpk-gtk:
     name: Check hpk-gtk
@@ -60,7 +79,7 @@ jobs:
           sudo apt-get -yq --no-install-suggests --no-install-recommends install libgtk-3-dev
 
       - name: Checkout
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Check hpk-gtk
         run: cargo check --manifest-path hpk-gtk/Cargo.toml
@@ -71,7 +90,7 @@ jobs:
 
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v1
+        uses: actions/checkout@v2
 
       - name: Install rust (nightly)
         uses: hecrj/setup-rust-action@v1
