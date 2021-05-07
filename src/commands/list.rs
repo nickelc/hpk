@@ -45,14 +45,12 @@ pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
         false
     }
 
-    for dent in walk {
-        if let Ok(dent) = dent {
-            if !matches_path(dent.path(), &paths) {
-                continue;
-            }
-            if !dent.is_dir() {
-                println!("{}", dent.path().display());
-            }
+    for dent in walk.flatten() {
+        if !matches_path(dent.path(), &paths) {
+            continue;
+        }
+        if !dent.is_dir() {
+            println!("{}", dent.path().display());
         }
     }
     Ok(())
