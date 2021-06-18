@@ -75,16 +75,16 @@ jobs:
 
             echo "(Get-FileHash \"$staging.zip\" -Algorithm SHA256).Hash | Out-File -Encoding ASCII -NoNewline \"$staging.zip.sha256\"" | pwsh -c -
 
-            echo "::set-env name=ASSET::$staging.zip"
-            echo "::set-env name=ASSET_CHK::$staging.zip.sha256"
+            echo "::set-output name=ASSET::$staging.zip"
+            echo "::set-output name=ASSET_CHK::$staging.zip.sha256"
           else
             cp "target/${{ matrix.target }}/release/hpk" "$staging/"
             tar czf "$staging.tar.gz"  "$staging"
 
             echo -n "$(shasum -ba 256 "$staging.tar.gz" | cut -d " " -f 1)" > "$staging.tar.gz.sha256"
 
-            echo "::set-env name=ASSET::$staging.tar.gz"
-            echo "::set-env name=ASSET_CHK::$staging.tar.gz.sha256"
+            echo "::set-output name=ASSET::$staging.tar.gz"
+            echo "::set-output name=ASSET_CHK::$staging.tar.gz.sha256"
           fi
 
       - name: Upload package
@@ -93,8 +93,8 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_name: ${{ env.ASSET }}
-          asset_path: ${{ env.ASSET }}
+          asset_name: ${{ steps.package.outputs.ASSET }}
+          asset_path: ${{ steps.package.outputs.ASSET }}
           asset_content_type: application/octet-stream
 
       - name: Upload package checksum
@@ -103,6 +103,6 @@ jobs:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
           upload_url: ${{ github.event.release.upload_url }}
-          asset_name: ${{ env.ASSET_CHK }}
-          asset_path: ${{ env.ASSET_CHK }}
+          asset_name: ${{ steps.package.outputs.ASSET_CHK }}
+          asset_path: ${{ steps.package.outputs.ASSET_CHK }}
           asset_content_type: application/octet-stream
