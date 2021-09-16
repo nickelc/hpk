@@ -9,7 +9,7 @@ use std::path::Path;
 
 macro_rules! assert_path_exists {
     ($p:expr) => {
-        assert!(Path::new($p).exists(), format!("{} does not exist", $p));
+        assert!(Path::new($p).exists(), "{} does not exist", $p);
     };
 }
 

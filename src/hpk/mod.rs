@@ -302,7 +302,7 @@ pub fn compress(options: &CompressOptions, r: &mut dyn Read, w: &mut dyn Write) 
         };
     }
 
-    let header_size = CompressionHeader::write(&options, inflated_length, &offsets, w)?;
+    let header_size = CompressionHeader::write(options, inflated_length, &offsets, w)?;
 
     Ok(header_size + io::copy(&mut Cursor::new(output_buffer), w)?)
 }
@@ -787,7 +787,7 @@ where
         if entry.file_type().is_file() {
             let (path, parent) = strip_prefix!(file entry.path());
 
-            fragments.push(write_file(&options, entry.path(), &mut w)?);
+            fragments.push(write_file(options, entry.path(), &mut w)?);
             let index = fragments.len() + 1;
             let parent_buf = stack.entry(parent.to_path_buf()).or_insert_with(Vec::new);
             let dent = DirEntry::new_file(path, index, entry.depth());

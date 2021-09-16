@@ -185,7 +185,7 @@ fn read_with_invalid_header<R: Read>(r: &mut R, buf: &mut [u8]) -> io::Result<us
         Ok(0) => Ok(0),
         Ok(n) => {
             let mut tmp = &tmp[0..n];
-            match parser::check_valid_header(&tmp) {
+            match parser::check_valid_header(tmp) {
                 Ok((remaining, bits)) => {
                     let mut w = io::Cursor::new(buf);
                     let mut n = 0;
