@@ -588,7 +588,11 @@ fn process_filedates<P: AsRef<Path>>(dest: P, r: &mut FragmentedReader<&File>) -
     }
     // }}}
 
-    let br = io::BufReader::new(r);
+    let mut buf = Cursor::new(Vec::new());
+    copy(r, &mut buf)?;
+    buf.set_position(0);
+
+    let br = io::BufReader::new(buf);
     for line in br.lines() {
         let line = line?;
         let entry: Vec<_> = line.rsplitn(2, '=').collect();
