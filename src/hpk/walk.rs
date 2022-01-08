@@ -153,8 +153,7 @@ impl HpkIter {
         let mut dir_entries = Cursor::new(vec![0; fragment.length as usize]);
 
         self.f.seek(SeekFrom::Start(fragment.offset))?;
-        self.f
-            .read_exact(&mut dir_entries.get_mut().as_mut_slice())?;
+        self.f.read_exact(dir_entries.get_mut().as_mut_slice())?;
 
         let mut list = vec![];
         while dir_entries.position() < fragment.length {

@@ -468,6 +468,7 @@ impl CompressionHeader {
 }
 
 // struct ExtractOptions {{{
+#[derive(Default)]
 pub struct ExtractOptions {
     paths: Vec<Pattern>,
     skip_filedates: bool,
@@ -475,20 +476,9 @@ pub struct ExtractOptions {
     verbose: bool,
 }
 
-impl Default for ExtractOptions {
-    fn default() -> Self {
-        Self {
-            paths: vec![],
-            skip_filedates: false,
-            fix_lua_files: false,
-            verbose: false,
-        }
-    }
-}
-
 impl ExtractOptions {
     pub fn new() -> Self {
-        Default::default()
+        Self::default()
     }
 
     pub fn skip_filedates(&mut self) {
