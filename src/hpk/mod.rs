@@ -68,7 +68,7 @@ impl Header {
             _identifier: HPK_SIG,
             data_offset: 36,
             fragments_per_file: 1,
-            _unknown2: 0xFF,
+            _unknown2: 0xFFFFFFFF,
             fragments_residual_offset: 0,
             fragments_residual_count: 0,
             _unknown5: 1,
