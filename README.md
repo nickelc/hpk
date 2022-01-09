@@ -126,12 +126,27 @@ USAGE:
     hpk create [FLAGS] [OPTIONS] <dir> <file>
 
 FLAGS:
-        --compress             Compress the whole hpk file
-        --lz4                  Sets LZ4 as encoder
-        --cripple-lua-files    Cripple bytecode header for Surviving Mars
-        --with-filedates       Stores the last modification times in a _filedates file
-    -h, --help                 Prints help information
-    -V, --version              Prints version information
+        --compress
+            Compress the whole hpk file
+
+        --lz4
+            Sets LZ4 as encoder
+
+        --cripple-lua-files
+            Cripple bytecode header for Victor Vran or Surviving Mars
+
+        --with-filedates
+            Stores the last modification times in a _filedates file
+
+    -h, --help
+            Prints help information
+
+        --dont-compress-files
+            No files are compressed. Overrides `--extensions`
+
+    -V, --version
+            Prints version information
+
 
 OPTIONS:
         --chunk-size <SIZE>

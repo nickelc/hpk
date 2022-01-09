@@ -67,6 +67,10 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
                 .next_line_help(true)
                 .long_help(FILETIME_FMT_HELP),
         )
+        .arg(
+            Arg::from_usage("[no-compress] --dont-compress-files")
+                .help("No files are compressed. Overrides `--extensions`")
+        )
         .arg(Arg::from_usage("[extensions] --extensions=<EXT>...")
                 .next_line_help(true)
                 .long_help(EXTENSIONS_HELP))
@@ -100,6 +104,9 @@ pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
     }
     if let Ok(extensions) = values_t!(matches, "extensions", String) {
         options.with_extensions(extensions);
+    }
+    if matches.is_present("no-compress") {
+        options.with_extensions(Vec::new());
     }
 
     hpk::create(&options, input, file)?;
