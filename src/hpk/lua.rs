@@ -42,7 +42,11 @@ const LUAC_NUM: f64 = 370.5;
 
 mod parser {
     use super::*;
+    use nom::branch::alt;
+    use nom::bytes::streaming::{tag, take};
+    use nom::combinator::{value, verify};
     use nom::number::streaming::{le_f64, le_u32, le_u64};
+    use nom::sequence::terminated;
     use nom::*;
 
     #[derive(Debug, Clone, PartialEq)]
@@ -51,62 +55,52 @@ mod parser {
         Int64,
     }
 
-    named!(lua_sig, tag!(LUA_SIG));
-    named!(lua_version53_fmt, tag!(LUA_VERSION53_FMT));
-    named!(luac_data, tag!(LUAC_DATA));
-    named!(luac_valid_sizeof, take!(5));
-    named!(luac_invalid_sizeof, take!(3));
-    named!(
-        luac_int32<Bits>,
-        value!(Bits::Int32, verify!(le_u32, |val| *val == LUAC_INT32))
-    );
-    named!(
-        luac_int64<Bits>,
-        value!(Bits::Int64, verify!(le_u64, |val| *val == LUAC_INT64))
-    );
-    named!(luac_num<f64>, verify!(le_f64, |val| *val == LUAC_NUM));
-    named!(pub check_invalid_header<Bits>,
-        do_parse!(
-            lua_sig
-        >>  lua_version53_fmt
-        >>  luac_data
-        >>  luac_invalid_sizeof
-        >>  bits: alt!(
-                do_parse!(
-                    bits: luac_int32    >>
-                    luac_num            >>
-                    (bits)
-                ) |
-                do_parse!(
-                    bits: luac_int64    >>
-                    luac_num            >>
-                    (bits)
-                )
-            )
-        >>  (bits)
-        )
-    );
-    named!(pub check_valid_header<Bits>,
-        do_parse!(
-            lua_sig
-        >>  lua_version53_fmt
-        >>  luac_data
-        >>  luac_valid_sizeof
-        >>  bits: alt!(
-                do_parse!(
-                    bits: luac_int32    >>
-                    luac_num            >>
-                    (bits)
-                ) |
-                do_parse!(
-                    bits: luac_int64    >>
-                    luac_num            >>
-                    (bits)
-                )
-            )
-        >>  (bits)
-        )
-    );
+    fn lua_sig(i: &[u8]) -> IResult<&[u8], &[u8]> {
+        tag(LUA_SIG)(i)
+    }
+    fn lua_version53_fmt(i: &[u8]) -> IResult<&[u8], &[u8]> {
+        tag(LUA_VERSION53_FMT)(i)
+    }
+    fn luac_data(i: &[u8]) -> IResult<&[u8], &[u8]> {
+        tag(LUAC_DATA)(i)
+    }
+    fn luac_valid_sizeof(i: &[u8]) -> IResult<&[u8], &[u8]> {
+        take(5_usize)(i)
+    }
+    fn luac_invalid_sizeof(i: &[u8]) -> IResult<&[u8], &[u8]> {
+        take(3_usize)(i)
+    }
+    fn luac_int32(i: &[u8]) -> IResult<&[u8], Bits> {
+        value(Bits::Int32, verify(le_u32, |val| *val == LUAC_INT32))(i)
+    }
+    fn luac_int64(i: &[u8]) -> IResult<&[u8], Bits> {
+        value(Bits::Int64, verify(le_u64, |val| *val == LUAC_INT64))(i)
+    }
+    fn luac_num(i: &[u8]) -> IResult<&[u8], f64> {
+        verify(le_f64, |val| *val == LUAC_NUM)(i)
+    }
+
+    pub fn check_invalid_header(i: &[u8]) -> IResult<&[u8], Bits> {
+        let (i, _) = lua_sig(i)?;
+        let (i, _) = lua_version53_fmt(i)?;
+        let (i, _) = luac_data(i)?;
+        let (i, _) = luac_invalid_sizeof(i)?;
+        alt((
+            terminated(luac_int32, luac_num),
+            terminated(luac_int64, luac_num),
+        ))(i)
+    }
+
+    pub fn check_valid_header(i: &[u8]) -> IResult<&[u8], Bits> {
+        let (i, _) = lua_sig(i)?;
+        let (i, _) = lua_version53_fmt(i)?;
+        let (i, _) = luac_data(i)?;
+        let (i, _) = luac_valid_sizeof(i)?;
+        alt((
+            terminated(luac_int32, luac_num),
+            terminated(luac_int64, luac_num),
+        ))(i)
+    }
 }
 
 pub type LuaHeaderRewriteReader<R> =
