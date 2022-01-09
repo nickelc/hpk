@@ -25,7 +25,8 @@
 * Surviving Mars
 
 ## Overview
-1. [Game Scripting](#game-scripting)
+1. [Compatibility Notes](#compatibility-notes)
+    1. [Game Scripting](#game-scripting)
 2. [Building](#building)
 3. [Installation](#installation)
 4. [Usage](#usage)
@@ -34,9 +35,14 @@
     3. [`hpk create`](#hpk-create)
     4. [`hpk extract`](#hpk-extract)
     5. [`hpk print`](#hpk-print)
- 5. [HPK File Format](#hpk-file-format)
+5. [HPK File Format](#hpk-file-format)
 
-## Game Scripting
+## Compatibility Notes
+
+Surviving Mars hangs when hpk files in the `DLC` folder contain compressed files.
+Use the `--dont-compress-files` option when creating files.
+
+### Game Scripting
 Haeminont uses [Lua][lua-url] for scripting their games.
 The scripts contain only the compiled Lua bytecode and have to be decompiled
 with [unluac][unluac-url] or [luadec][luadec-url] to get the source code.
