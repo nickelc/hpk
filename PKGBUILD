@@ -23,4 +23,5 @@ package() {
     cd $srcdir/$pkgname
 
     install -D -m755 target/release/hpk -t "$pkgdir"/usr/bin
+    install -D -m644 LICENSE -t "$pkgdir/usr/share/licenses/$pkgname"
 }
