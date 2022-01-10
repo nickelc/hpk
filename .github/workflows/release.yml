@@ -95,8 +95,7 @@ jobs:
           sudo apt-get install -y makedeb
 
       - name: Build DEB
-        run: |
-          makedeb -s
+        run: makedeb -s --no-confirm
 
       - name: Upload package
         uses: actions/upload-release-asset@v1
