@@ -84,6 +84,30 @@ jobs:
       - name: Check hpk-gtk
         run: cargo check --manifest-path hpk-gtk/Cargo.toml
 
+  makedeb:
+    name: Check makedeb
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Install rust
+        uses: hecrj/setup-rust-action@v1
+
+      - name: Setup Makedeb
+        run: |
+          wget -qO - 'https://proget.hunterwittenborn.com/debian-feeds/makedeb.pub' | gpg --dearmor | sudo tee /usr/share/keyrings/makedeb-archive-keyring.gpg &> /dev/null
+          echo 'deb [signed-by=/usr/share/keyrings/makedeb-archive-keyring.gpg arch=all] https://proget.hunterwittenborn.com/ makedeb main' | sudo tee /etc/apt/sources.list.d/makedeb.list
+          sudo apt-get update
+          sudo apt-get install -y makedeb
+
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Build hpk
+        run: cargo build --release
+
+      - name: Build DEB
+        run: makedeb -s --no-confirm
+
   nightly:
     name: Check nightly
     runs-on: ubuntu-latest
