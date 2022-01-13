@@ -111,6 +111,7 @@ impl Header {
     }
 
     pub fn filesystem_entries(&self) -> usize {
+        // The size, in bytes, of how `Fragment` appairs in files.
         const FRAGMENT_SIZE: u32 = 8;
         (self.fragmented_filesystem_length as u32 / (FRAGMENT_SIZE * self.fragments_per_file))
             as usize
