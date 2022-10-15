@@ -168,9 +168,7 @@ impl DirEntry {
     }
 
     pub fn file_name(&self) -> &OsStr {
-        self.path
-            .file_name()
-            .unwrap_or_else(|| self.path.as_os_str())
+        self.path.file_name().unwrap_or(self.path.as_os_str())
     }
 
     pub fn index(&self) -> usize {
@@ -343,7 +341,7 @@ impl Default for CompressOptions {
     }
 }
 
-#[derive(PartialEq)]
+#[derive(PartialEq, Eq)]
 pub enum Compression {
     Zlib,
     Lz4,
@@ -534,7 +532,7 @@ where
             } else {
                 if let Some(parent) = path.parent() {
                     if !parent.exists() {
-                        ::std::fs::create_dir_all(&parent)?;
+                        ::std::fs::create_dir_all(parent)?;
                     }
                 }
                 walk.read_file(&entry, |mut r| {
@@ -710,7 +708,7 @@ impl CreateOptions {
     ///
     fn filedates_value_for_path<P: AsRef<Path>>(&self, path: P) -> HpkResult<i64> {
         let ft = filetime::FileTime::from_last_modification_time(&path.as_ref().metadata()?);
-        let filetime = ft.seconds() as i64;
+        let filetime = ft.seconds();
 
         // Convert the platform dependent file time to Windows file time
         #[cfg(unix)]
@@ -784,12 +782,12 @@ where
 
             fragments.push(write_file(options, entry.path(), &mut w)?);
             let index = fragments.len() + 1;
-            let parent_buf = stack.entry(parent.to_path_buf()).or_insert_with(Vec::new);
+            let parent_buf = stack.entry(parent.to_path_buf()).or_default();
             let dent = DirEntry::new_file(path, index, entry.depth());
             dent.write(parent_buf)?;
         } else if entry.file_type().is_dir() {
             let (path, parent) = strip_prefix!(dir entry.path());
-            let mut dir_buffer = stack.remove(&path.to_path_buf()).unwrap_or_else(Vec::new);
+            let mut dir_buffer = stack.remove(&path.to_path_buf()).unwrap_or_default();
 
             // write _filedates in the root dir buffer
             if options.with_filedates() && entry.depth() == 0 {

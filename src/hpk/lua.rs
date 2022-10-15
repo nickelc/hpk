@@ -49,7 +49,7 @@ mod parser {
     use nom::sequence::terminated;
     use nom::*;
 
-    #[derive(Debug, Clone, PartialEq)]
+    #[derive(Debug, Clone, PartialEq, Eq)]
     pub enum Bits {
         Int32,
         Int64,
