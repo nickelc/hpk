@@ -75,16 +75,16 @@ jobs:
 
             echo "(Get-FileHash \"$staging.zip\" -Algorithm SHA256).Hash | Out-File -Encoding ASCII -NoNewline \"$staging.zip.sha256\"" | pwsh -c -
 
-            echo "::set-output name=ASSET::$staging.zip"
-            echo "::set-output name=ASSET_CHK::$staging.zip.sha256"
+            echo "ASSET=$staging.zip" >> $GITHUB_OUTPUT
+            echo "ASSET_CHK=$staging.zip.sha256" >> $GITHUB_OUTPUT
           else
             cp "target/${{ matrix.target }}/release/hpk" "$staging/"
             tar czf "$staging.tar.gz"  "$staging"
 
             echo -n "$(shasum -ba 256 "$staging.tar.gz" | cut -d " " -f 1)" > "$staging.tar.gz.sha256"
 
-            echo "::set-output name=ASSET::$staging.tar.gz"
-            echo "::set-output name=ASSET_CHK::$staging.tar.gz.sha256"
+            echo "ASSET::$staging.tar.gz" >> $GITHUB_OUTPUT
+            echo "ASSET_CHK::$staging.tar.gz.sha256" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload package
