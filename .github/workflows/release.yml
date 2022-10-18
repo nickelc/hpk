@@ -83,8 +83,8 @@ jobs:
 
             echo -n "$(shasum -ba 256 "$staging.tar.gz" | cut -d " " -f 1)" > "$staging.tar.gz.sha256"
 
-            echo "ASSET::$staging.tar.gz" >> $GITHUB_OUTPUT
-            echo "ASSET_CHK::$staging.tar.gz.sha256" >> $GITHUB_OUTPUT
+            echo "ASSET=$staging.tar.gz" >> $GITHUB_OUTPUT
+            echo "ASSET_CHK=$staging.tar.gz.sha256" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload package
@@ -112,6 +112,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
       - name: Setup Makedeb
         run: |
           wget -qO - 'https://proget.hunterwittenborn.com/debian-feeds/makedeb.pub' | gpg --dearmor | sudo tee /usr/share/keyrings/makedeb-archive-keyring.gpg &> /dev/null
@@ -120,4 +123,5 @@ jobs:
           sudo apt-get install -y makedeb
 
       - name: Build DEB
+        continue-on-error: true
         run: makedeb -s --no-confirm
