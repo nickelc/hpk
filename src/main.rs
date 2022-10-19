@@ -27,8 +27,8 @@ type CliResult = Result<(), Error>;
 
 fn main() -> CliResult {
     let matches = App::new("hpk")
-        .version(crate_version!())
-        .about(crate_description!())
+        .version(clap::crate_version!())
+        .about(clap::crate_description!())
         .after_help("https://github.com/nickelc/hpk")
         .setting(AppSettings::SubcommandRequiredElseHelp)
         .subcommand(commands::create::clap())
@@ -38,10 +38,10 @@ fn main() -> CliResult {
         .get_matches();
 
     match matches.subcommand() {
-        ("create", Some(matches)) => commands::create::execute(matches)?,
-        ("extract", Some(matches)) => commands::extract::execute(matches)?,
-        ("list", Some(matches)) => commands::list::execute(matches)?,
-        ("print", Some(matches)) => commands::print::execute(matches)?,
+        Some(("create", matches)) => commands::create::execute(matches)?,
+        Some(("extract", matches)) => commands::extract::execute(matches)?,
+        Some(("list", matches)) => commands::list::execute(matches)?,
+        Some(("print", matches)) => commands::print::execute(matches)?,
         _ => unreachable!(),
     };
     Ok(())

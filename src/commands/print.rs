@@ -4,10 +4,9 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 
 use crate::CliResult;
 
-pub fn clap<'a, 'b>() -> App<'a, 'b> {
-    #[allow(clippy::needless_pass_by_value)]
-    fn validate_input(value: String) -> Result<(), String> {
-        let path = Path::new(&value);
+pub fn clap<'a>() -> App<'a> {
+    fn validate_input(value: &str) -> Result<(), String> {
+        let path = Path::new(value);
         match path.metadata() {
             Ok(ref md) if md.is_file() => Ok(()),
             Ok(_) => Err(String::from("Not a valid file")),
@@ -24,7 +23,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         ))
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
+pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = value_t!(matches, "file", String)?;
     let mut walk = hpk::walk(input)?;
 

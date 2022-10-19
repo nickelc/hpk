@@ -1,15 +1,26 @@
 use std::fs;
 
+use clap::builder::{EnumValueParser, PossibleValue};
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use crate::CliResult;
 
-arg_enum! {
-    #[allow(non_camel_case_types)]
-    #[derive(PartialEq, Debug)]
-    enum FileDateFormat {
-        default,
-        short
+#[derive(Clone, Debug, PartialEq)]
+enum FileDateFormat {
+    Default,
+    Short,
+}
+
+impl clap::ValueEnum for FileDateFormat {
+    fn value_variants<'a>() -> &'a [Self] {
+        &[Self::Default, Self::Short]
+    }
+
+    fn to_possible_value<'a>(&self) -> Option<PossibleValue<'a>> {
+        match self {
+            Self::Default => Some(PossibleValue::new("default")),
+            Self::Short => Some(PossibleValue::new("short")),
+        }
     }
 }
 
@@ -21,16 +32,14 @@ short: 'Windows file time / 2000' used by Tropico 4 and Omerta";
 const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
                                default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
 
-pub fn clap<'a, 'b>() -> App<'a, 'b> {
-    #[allow(clippy::needless_pass_by_value)]
-    fn validate_chunk_size(value: String) -> Result<(), String> {
+pub fn clap<'a>() -> App<'a> {
+    fn validate_chunk_size(value: &str) -> Result<(), String> {
         match value.parse::<u32>() {
             Ok(_) => Ok(()),
             Err(_) => Err(String::from("Invalid value for chunk size")),
         }
     }
-    #[allow(clippy::needless_pass_by_value)]
-    fn validate_dir(value: String) -> Result<(), String> {
+    fn validate_dir(value: &str) -> Result<(), String> {
         if let Ok(md) = fs::metadata(value) {
             if md.is_dir() {
                 return Ok(());
@@ -61,8 +70,8 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         ))
         .arg(
             Arg::from_usage("[filedate-fmt] --filedate-fmt <FORMAT>")
-                .default_value_if("filedates", None, "default")
-                .possible_values(&FileDateFormat::variants())
+                .default_value_if("filedates", None, Some("default"))
+                .value_parser(EnumValueParser::<FileDateFormat>::new())
                 .hide_possible_values(true)
                 .next_line_help(true)
                 .long_help(FILETIME_FMT_HELP),
@@ -79,7 +88,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::from_usage("<file> 'hpk output file'"))
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
+pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = value_t!(matches, "dir", String)?;
     let file = value_t!(matches, "file", String)?;
 
@@ -96,10 +105,10 @@ pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
     if let Ok(chunk_size) = value_t!(matches, "chunk_size", u32) {
         options.with_chunk_size(chunk_size);
     }
-    if let Ok(fmt) = value_t!(matches, "filedate-fmt", FileDateFormat) {
+    if let Some(fmt) = matches.get_one("filedate-fmt") {
         match fmt {
-            FileDateFormat::default => options.with_default_filedates_format(),
-            FileDateFormat::short => options.with_short_filedates_format(),
+            FileDateFormat::Default => options.with_default_filedates_format(),
+            FileDateFormat::Short => options.with_short_filedates_format(),
         }
     }
     if let Ok(extensions) = values_t!(matches, "extensions", String) {

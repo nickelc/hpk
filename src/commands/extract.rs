@@ -6,9 +6,8 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 
 use crate::CliResult;
 
-pub fn clap<'a, 'b>() -> App<'a, 'b> {
-    #[allow(clippy::needless_pass_by_value)]
-    fn validate_input(value: String) -> Result<(), String> {
+pub fn clap<'a>() -> App<'a> {
+    fn validate_input(value: &str) -> Result<(), String> {
         if let Ok(md) = fs::metadata(value) {
             if md.is_file() {
                 return Ok(());
@@ -16,8 +15,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         }
         Err(String::from("Not a valid file"))
     }
-    #[allow(clippy::needless_pass_by_value)]
-    fn validate_dest(value: String) -> Result<(), String> {
+    fn validate_dest(value: &str) -> Result<(), String> {
         match fs::metadata(value) {
             Ok(ref md) if md.is_file() => Err(String::from("Not a valid directory")),
             Ok(_) | Err(_) => Ok(()),
@@ -49,7 +47,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         ))
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
+pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = value_t!(matches, "file", String).map(PathBuf::from)?;
     let dest = value_t!(matches, "dest", String).map(PathBuf::from)?;
     let force = matches.is_present("force");

@@ -6,9 +6,8 @@ use glob::Pattern;
 
 use crate::CliResult;
 
-pub fn clap<'a, 'b>() -> App<'a, 'b> {
-    #[allow(clippy::needless_pass_by_value)]
-    fn validate_input(value: String) -> Result<(), String> {
+pub fn clap<'a>() -> App<'a> {
+    fn validate_input(value: &str) -> Result<(), String> {
         match fs::metadata(value) {
             Ok(ref md) if md.is_file() => Ok(()),
             Ok(_) => Err(String::from("Not a valid file")),
@@ -23,7 +22,7 @@ pub fn clap<'a, 'b>() -> App<'a, 'b> {
         .arg(Arg::from_usage("[paths]..."))
 }
 
-pub fn execute(matches: &ArgMatches<'_>) -> CliResult {
+pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = value_t!(matches, "file", String)?;
     let paths = values_t!(matches, "paths", String).unwrap_or_default();
     let paths = paths
