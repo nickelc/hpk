@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate clap;
-
 mod commands;
 
-use clap::{App, AppSettings};
+use clap::Command;
 
 #[derive(Debug)]
 pub enum Error {
@@ -26,11 +23,12 @@ impl From<clap::Error> for Error {
 type CliResult = Result<(), Error>;
 
 fn main() -> CliResult {
-    let matches = App::new("hpk")
+    let matches = Command::new("hpk")
         .version(clap::crate_version!())
         .about(clap::crate_description!())
         .after_help("https://github.com/nickelc/hpk")
-        .setting(AppSettings::SubcommandRequiredElseHelp)
+        .subcommand_required(true)
+        .arg_required_else_help(true)
         .subcommand(commands::create::clap())
         .subcommand(commands::extract::clap())
         .subcommand(commands::list::clap())

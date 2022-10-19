@@ -1,11 +1,11 @@
 use std::path::{Path, PathBuf};
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{arg, ArgMatches, Command};
 use glob::Pattern;
 
 use crate::CliResult;
 
-pub fn clap<'a>() -> App<'a> {
+pub fn clap<'a>() -> Command<'a> {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let file = Path::new(value);
         match file.metadata() {
@@ -15,20 +15,19 @@ pub fn clap<'a>() -> App<'a> {
         }
     }
 
-    SubCommand::with_name("list")
+    Command::new("list")
         .about("List the content of a hpk archive")
         .display_order(20)
-        .arg(Arg::from_usage("<file> 'hpk archive'").value_parser(input_parser))
-        .arg(Arg::from_usage("[paths]..."))
+        .arg(arg!(<file> "hpk archive").value_parser(input_parser))
+        .arg(arg!([paths]...))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = matches.get_one::<PathBuf>("file").expect("required arg");
-    let paths = values_t!(matches, "paths", String).unwrap_or_default();
-    let paths = paths
-        .iter()
-        .filter_map(|s| Pattern::new(s).ok())
-        .collect::<Vec<_>>();
+    let paths = matches
+        .get_many::<String>("paths")
+        .map(|v| v.filter_map(|p| Pattern::new(p).ok()).collect::<Vec<_>>())
+        .unwrap_or_default();
 
     let walk = hpk::walk(input)?;
 

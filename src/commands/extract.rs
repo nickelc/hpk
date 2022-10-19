@@ -1,11 +1,11 @@
 use std::path::{Path, PathBuf};
 use std::process;
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{arg, ArgMatches, Command};
 
 use crate::CliResult;
 
-pub fn clap<'a>() -> App<'a> {
+pub fn clap<'a>() -> Command<'a> {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let file = Path::new(value);
         if let Ok(md) = file.metadata() {
@@ -23,36 +23,23 @@ pub fn clap<'a>() -> App<'a> {
         }
     }
 
-    SubCommand::with_name("extract")
+    Command::new("extract")
         .about("Extract files from a hpk archive")
         .display_order(10)
-        .arg(Arg::from_usage("<file> 'hpk archive'").value_parser(input_parser))
-        .arg(Arg::from_usage("<dest> 'destination folder'").value_parser(dest_parser))
-        .arg(
-            Arg::from_usage("[paths]...")
-                .help("An optional list of archive members to be processed, separated by spaces."),
-        )
-        .arg(
-            Arg::from_usage("[filedates] --ignore-filedates")
-                .help("Skip processing of a _filedates file and just extract it"),
-        )
-        .arg(
-            Arg::from_usage("[fix_lua] --fix-lua-files")
-                .help("Fix the bytecode header of Victor Vran's or Surviving Mars' Lua files"),
-        )
-        .arg(Arg::from_usage(
-            "[force] --force 'Force extraction if destination folder is not empty'",
-        ))
-        .arg(Arg::from_usage(
-            "[verbose] -v 'Verbosely list files processed'",
-        ))
+        .arg(arg!(<file> "hpk archive").value_parser(input_parser))
+        .arg(arg!(<dest> "destination folder").value_parser(dest_parser))
+        .arg(arg!([paths]... "An optional list of archive members to be processed, separated by spaces."))
+        .arg(arg!(filedates: --"ignore-filedates" "Skip processing of a _filedates file and just extract it"))
+        .arg(arg!(fix_lua: --"fix-lua-files" "Fix the bytecode header of Victor Vran's or Surviving Mars' Lua files"))
+        .arg(arg!(--force "Force extraction if destination folder is not empty"))
+        .arg(arg!(verbose: -v "Verbosely list files processed"))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = matches.get_one::<PathBuf>("file").expect("required arg");
     let dest = matches.get_one::<PathBuf>("dest").expect("required arg");
-    let force = matches.is_present("force");
-    let verbose = matches.is_present("verbose");
+    let force = matches.contains_id("force");
+    let verbose = matches.contains_id("verbose");
 
     if let Ok(dir) = dest.read_dir() {
         if !force && dir.count() > 0 {
@@ -61,15 +48,21 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
         }
     }
 
+    let paths = matches
+        .get_many("paths")
+        .map(|v| v.cloned().collect::<Vec<_>>())
+        .unwrap_or_default();
+
     let mut options = hpk::ExtractOptions::new();
-    options.set_paths(&values_t!(matches, "paths", String).unwrap_or_default());
+    options.set_paths(&paths);
     options.set_verbose(verbose);
-    if matches.is_present("filedates") {
+    if matches.contains_id("filedates") {
         options.skip_filedates();
     }
-    if matches.is_present("fix_lua") {
+    if matches.contains_id("fix_lua") {
         options.fix_lua_files();
     }
+
     hpk::extract(&options, input, dest)?;
     Ok(())
 }

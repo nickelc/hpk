@@ -1,10 +1,10 @@
 use std::path::{Path, PathBuf};
 
-use clap::{App, Arg, ArgMatches, SubCommand};
+use clap::{arg, ArgMatches, Command};
 
 use crate::CliResult;
 
-pub fn clap<'a>() -> App<'a> {
+pub fn clap<'a>() -> Command<'a> {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let path = Path::new(value);
         match path.metadata() {
@@ -14,13 +14,11 @@ pub fn clap<'a>() -> App<'a> {
         }
     }
 
-    SubCommand::with_name("print")
+    Command::new("print")
         .about("Print information of a hpk archive")
         .display_order(30)
-        .arg(Arg::from_usage("<file> 'hpk archive'").value_parser(input_parser))
-        .arg(Arg::from_usage(
-            "[header] --header-only 'Print only the header informations'",
-        ))
+        .arg(arg!(<file> "hpk archive").value_parser(input_parser))
+        .arg(arg!(header: --"header-only" "Print only the header informations"))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
@@ -52,7 +50,7 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     );
     println!("filesystem entries: {}", walk.header().filesystem_entries());
 
-    if matches.is_present("header") {
+    if matches.contains_id("header") {
         return Ok(());
     }
 
