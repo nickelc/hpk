@@ -1,5 +1,4 @@
-use std::fs;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 use glob::Pattern;
@@ -7,9 +6,10 @@ use glob::Pattern;
 use crate::CliResult;
 
 pub fn clap<'a>() -> App<'a> {
-    fn validate_input(value: &str) -> Result<(), String> {
-        match fs::metadata(value) {
-            Ok(ref md) if md.is_file() => Ok(()),
+    fn input_parser(value: &str) -> Result<PathBuf, String> {
+        let file = Path::new(value);
+        match file.metadata() {
+            Ok(ref md) if md.is_file() => Ok(file.to_path_buf()),
             Ok(_) => Err(String::from("Not a valid file")),
             Err(_) => Err(String::from("Not a valid file")),
         }
@@ -18,12 +18,12 @@ pub fn clap<'a>() -> App<'a> {
     SubCommand::with_name("list")
         .about("List the content of a hpk archive")
         .display_order(20)
-        .arg(Arg::from_usage("<file> 'hpk archive'").validator(validate_input))
+        .arg(Arg::from_usage("<file> 'hpk archive'").value_parser(input_parser))
         .arg(Arg::from_usage("[paths]..."))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
-    let input = value_t!(matches, "file", String)?;
+    let input = matches.get_one::<PathBuf>("file").expect("required arg");
     let paths = values_t!(matches, "paths", String).unwrap_or_default();
     let paths = paths
         .iter()

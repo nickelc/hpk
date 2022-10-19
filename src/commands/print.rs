@@ -1,14 +1,14 @@
-use std::path::Path;
+use std::path::{Path, PathBuf};
 
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use crate::CliResult;
 
 pub fn clap<'a>() -> App<'a> {
-    fn validate_input(value: &str) -> Result<(), String> {
+    fn input_parser(value: &str) -> Result<PathBuf, String> {
         let path = Path::new(value);
         match path.metadata() {
-            Ok(ref md) if md.is_file() => Ok(()),
+            Ok(ref md) if md.is_file() => Ok(path.to_path_buf()),
             Ok(_) => Err(String::from("Not a valid file")),
             Err(_) => Err(String::from("Not a valid file")),
         }
@@ -17,14 +17,14 @@ pub fn clap<'a>() -> App<'a> {
     SubCommand::with_name("print")
         .about("Print information of a hpk archive")
         .display_order(30)
-        .arg(Arg::from_usage("<file> 'hpk archive'").validator(validate_input))
+        .arg(Arg::from_usage("<file> 'hpk archive'").value_parser(input_parser))
         .arg(Arg::from_usage(
             "[header] --header-only 'Print only the header informations'",
         ))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
-    let input = value_t!(matches, "file", String)?;
+    let input = matches.get_one::<PathBuf>("file").expect("required arg");
     let mut walk = hpk::walk(input)?;
 
     println!("reading file: {}", walk.path().display());

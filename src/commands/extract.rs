@@ -1,5 +1,4 @@
-use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process;
 
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -7,26 +6,28 @@ use clap::{App, Arg, ArgMatches, SubCommand};
 use crate::CliResult;
 
 pub fn clap<'a>() -> App<'a> {
-    fn validate_input(value: &str) -> Result<(), String> {
-        if let Ok(md) = fs::metadata(value) {
+    fn input_parser(value: &str) -> Result<PathBuf, String> {
+        let file = Path::new(value);
+        if let Ok(md) = file.metadata() {
             if md.is_file() {
-                return Ok(());
+                return Ok(file.to_path_buf());
             }
         }
         Err(String::from("Not a valid file"))
     }
-    fn validate_dest(value: &str) -> Result<(), String> {
-        match fs::metadata(value) {
+    fn dest_parser(value: &str) -> Result<PathBuf, String> {
+        let dest = Path::new(value);
+        match dest.metadata() {
             Ok(ref md) if md.is_file() => Err(String::from("Not a valid directory")),
-            Ok(_) | Err(_) => Ok(()),
+            Ok(_) | Err(_) => Ok(dest.to_path_buf()),
         }
     }
 
     SubCommand::with_name("extract")
         .about("Extract files from a hpk archive")
         .display_order(10)
-        .arg(Arg::from_usage("<file> 'hpk archive'").validator(validate_input))
-        .arg(Arg::from_usage("<dest> 'destination folder'").validator(validate_dest))
+        .arg(Arg::from_usage("<file> 'hpk archive'").value_parser(input_parser))
+        .arg(Arg::from_usage("<dest> 'destination folder'").value_parser(dest_parser))
         .arg(
             Arg::from_usage("[paths]...")
                 .help("An optional list of archive members to be processed, separated by spaces."),
@@ -48,8 +49,8 @@ pub fn clap<'a>() -> App<'a> {
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
-    let input = value_t!(matches, "file", String).map(PathBuf::from)?;
-    let dest = value_t!(matches, "dest", String).map(PathBuf::from)?;
+    let input = matches.get_one::<PathBuf>("file").expect("required arg");
+    let dest = matches.get_one::<PathBuf>("dest").expect("required arg");
     let force = matches.is_present("force");
     let verbose = matches.is_present("verbose");
 

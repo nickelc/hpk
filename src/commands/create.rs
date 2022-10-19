@@ -1,6 +1,6 @@
-use std::fs;
+use std::path::{Path, PathBuf};
 
-use clap::builder::{EnumValueParser, PossibleValue};
+use clap::builder::{EnumValueParser, PathBufValueParser, PossibleValue};
 use clap::{App, Arg, ArgMatches, SubCommand};
 
 use crate::CliResult;
@@ -33,16 +33,11 @@ const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
                                default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
 
 pub fn clap<'a>() -> App<'a> {
-    fn validate_chunk_size(value: &str) -> Result<(), String> {
-        match value.parse::<u32>() {
-            Ok(_) => Ok(()),
-            Err(_) => Err(String::from("Invalid value for chunk size")),
-        }
-    }
-    fn validate_dir(value: &str) -> Result<(), String> {
-        if let Ok(md) = fs::metadata(value) {
+    fn input_parser(value: &str) -> Result<PathBuf, String> {
+        let dir = Path::new(value);
+        if let Ok(md) = dir.metadata() {
             if md.is_dir() {
-                return Ok(());
+                return Ok(dir.to_path_buf());
             }
         }
         Err(String::from("Not a valid directory"))
@@ -61,7 +56,7 @@ pub fn clap<'a>() -> App<'a> {
         )
         .arg(Arg::from_usage("[chunk_size] --chunk-size <SIZE> 'Default chunk size: 32768'")
                 .next_line_help(true)
-                .validator(validate_chunk_size))
+                .value_parser(clap::value_parser!(u32)))
         .arg(Arg::from_usage("[cripple_lua] --cripple-lua-files")
                 .help("Cripple bytecode header for Victor Vran or Surviving Mars")
         )
@@ -84,13 +79,14 @@ pub fn clap<'a>() -> App<'a> {
                 .next_line_help(true)
                 .long_help(EXTENSIONS_HELP))
         .arg(Arg::from_usage("<dir> 'input directory'")
-                .validator(validate_dir))
-        .arg(Arg::from_usage("<file> 'hpk output file'"))
+                .value_parser(input_parser))
+        .arg(Arg::from_usage("<file> 'hpk output file'")
+                .value_parser(PathBufValueParser::new()))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
-    let input = value_t!(matches, "dir", String)?;
-    let file = value_t!(matches, "file", String)?;
+    let input = matches.get_one::<PathBuf>("dir").expect("required arg");
+    let file = matches.get_one::<PathBuf>("file").expect("required arg");
 
     let mut options = hpk::CreateOptions::new();
     if matches.is_present("compress") {
@@ -102,8 +98,8 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     if matches.is_present("cripple_lua") {
         options.cripple_lua_files();
     }
-    if let Ok(chunk_size) = value_t!(matches, "chunk_size", u32) {
-        options.with_chunk_size(chunk_size);
+    if let Some(chunk_size) = matches.get_one::<u32>("chunk_size") {
+        options.with_chunk_size(*chunk_size);
     }
     if let Some(fmt) = matches.get_one("filedate-fmt") {
         match fmt {
