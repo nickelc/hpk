@@ -16,7 +16,7 @@ impl clap::ValueEnum for FileDateFormat {
         &[Self::Default, Self::Short]
     }
 
-    fn to_possible_value<'a>(&self) -> Option<PossibleValue<'a>> {
+    fn to_possible_value(&self) -> Option<PossibleValue> {
         match self {
             Self::Default => Some(PossibleValue::new("default")),
             Self::Short => Some(PossibleValue::new("short")),
@@ -32,7 +32,7 @@ short: 'Windows file time / 2000' used by Tropico 4 and Omerta";
 const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
                                default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
 
-pub fn clap<'a>() -> Command<'a> {
+pub fn clap() -> Command {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let dir = Path::new(value);
         if let Ok(md) = dir.metadata() {
@@ -49,15 +49,13 @@ pub fn clap<'a>() -> Command<'a> {
         .arg(arg!(--compress "Compress the whole hpk file").display_order(0))
         .arg(arg!(--lz4 "Sets LZ4 as encoder").display_order(10))
         .arg(arg!(chunk_size: --"chunk-size" <SIZE> "Default chunk size: 32768")
-                .required(false)
                 .value_parser(clap::value_parser!(u32))
                 .next_line_help(true))
         .arg(arg!(cripple_lua: --"cripple-lua-files" "Cripple bytecode header for Victor Vran or Surviving Mars"))
         .arg(arg!(--"with-filedates" "Stores the last modification times in a _filedates file"))
         .arg(
             arg!(--"filedate-fmt" <FORMAT>)
-                .required(false)
-                .default_value_if("with-filedates", None, Some("default"))
+                .default_value_if("with-filedates", "true", Some("default"))
                 .value_parser(EnumValueParser::<FileDateFormat>::new())
                 .hide_possible_values(true)
                 .next_line_help(true)
@@ -65,8 +63,7 @@ pub fn clap<'a>() -> Command<'a> {
         )
         .arg(arg!(no_compress: --"dont-compress-files" "No files are compressed. Overrides `--extensions`"))
         .arg(arg!(--extensions <EXT>...)
-                .required(false)
-                .multiple_values(true)
+                .num_args(1..)
                 .use_value_delimiter(true)
                 .next_line_help(true)
                 .long_help(EXTENSIONS_HELP))
@@ -79,13 +76,13 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     let file = matches.get_one::<PathBuf>("file").expect("required arg");
 
     let mut options = hpk::CreateOptions::new();
-    if matches.contains_id("compress") {
+    if matches.get_flag("compress") {
         options.compress();
     }
-    if matches.contains_id("lz4") {
+    if matches.get_flag("lz4") {
         options.use_lz4();
     }
-    if matches.contains_id("cripple_lua") {
+    if matches.get_flag("cripple_lua") {
         options.cripple_lua_files();
     }
     if let Some(chunk_size) = matches.get_one::<u32>("chunk_size") {
@@ -100,7 +97,7 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     if let Some(extensions) = matches.get_many::<String>("extensions") {
         options.with_extensions(extensions.map(ToOwned::to_owned).collect());
     }
-    if matches.contains_id("no_compress") {
+    if matches.get_flag("no_compress") {
         options.with_extensions(Vec::new());
     }
 

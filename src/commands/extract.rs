@@ -5,7 +5,7 @@ use clap::{arg, ArgMatches, Command};
 
 use crate::CliResult;
 
-pub fn clap<'a>() -> Command<'a> {
+pub fn clap() -> Command {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let file = Path::new(value);
         if let Ok(md) = file.metadata() {
@@ -38,8 +38,8 @@ pub fn clap<'a>() -> Command<'a> {
 pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = matches.get_one::<PathBuf>("file").expect("required arg");
     let dest = matches.get_one::<PathBuf>("dest").expect("required arg");
-    let force = matches.contains_id("force");
-    let verbose = matches.contains_id("verbose");
+    let force = matches.get_flag("force");
+    let verbose = matches.get_flag("verbose");
 
     if let Ok(dir) = dest.read_dir() {
         if !force && dir.count() > 0 {
@@ -56,10 +56,10 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     let mut options = hpk::ExtractOptions::new();
     options.set_paths(&paths);
     options.set_verbose(verbose);
-    if matches.contains_id("filedates") {
+    if matches.get_flag("filedates") {
         options.skip_filedates();
     }
-    if matches.contains_id("fix_lua") {
+    if matches.get_flag("fix_lua") {
         options.fix_lua_files();
     }
 

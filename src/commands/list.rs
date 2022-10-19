@@ -5,7 +5,7 @@ use glob::Pattern;
 
 use crate::CliResult;
 
-pub fn clap<'a>() -> Command<'a> {
+pub fn clap() -> Command {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let file = Path::new(value);
         match file.metadata() {

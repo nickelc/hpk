@@ -4,7 +4,7 @@ use clap::{arg, ArgMatches, Command};
 
 use crate::CliResult;
 
-pub fn clap<'a>() -> Command<'a> {
+pub fn clap() -> Command {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let path = Path::new(value);
         match path.metadata() {
@@ -50,7 +50,7 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     );
     println!("filesystem entries: {}", walk.header().filesystem_entries());
 
-    if matches.contains_id("header") {
+    if matches.get_flag("header") {
         return Ok(());
     }
 

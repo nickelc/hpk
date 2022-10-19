@@ -38,8 +38,8 @@ default-features = false
 
 [dependencies.clap]
 default-features = false
-features = ["std", "cargo"]
-version = "3.2"
+features = ["std", "cargo", "help", "usage", "error-context"]
+version = "4.0"
 
 [dependencies.lz4]
 version="1"
