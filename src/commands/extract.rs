@@ -2,6 +2,7 @@ use std::path::{Path, PathBuf};
 use std::process;
 
 use clap::{arg, ArgMatches, Command};
+use glob::Pattern;
 
 use crate::CliResult;
 
@@ -28,7 +29,8 @@ pub fn clap() -> Command {
         .display_order(10)
         .arg(arg!(<file> "hpk archive").value_parser(input_parser))
         .arg(arg!(<dest> "destination folder").value_parser(dest_parser))
-        .arg(arg!([paths]... "An optional list of archive members to be processed, separated by spaces."))
+        .arg(arg!([paths]... "An optional list of archive members to be processed, separated by spaces.")
+            .value_parser(Pattern::new))
         .arg(arg!(filedates: --"ignore-filedates" "Skip processing of a _filedates file and just extract it"))
         .arg(arg!(fix_lua: --"fix-lua-files" "Fix the bytecode header of Victor Vran's or Surviving Mars' Lua files"))
         .arg(arg!(--force "Force extraction if destination folder is not empty"))
@@ -49,7 +51,7 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     }
 
     let paths = matches
-        .get_many("paths")
+        .get_many::<Pattern>("paths")
         .map(|v| v.cloned().collect::<Vec<_>>())
         .unwrap_or_default();
 

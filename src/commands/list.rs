@@ -19,19 +19,19 @@ pub fn clap() -> Command {
         .about("List the content of a hpk archive")
         .display_order(20)
         .arg(arg!(<file> "hpk archive").value_parser(input_parser))
-        .arg(arg!([paths]...))
+        .arg(arg!([paths]...).value_parser(Pattern::new))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = matches.get_one::<PathBuf>("file").expect("required arg");
     let paths = matches
-        .get_many::<String>("paths")
-        .map(|v| v.filter_map(|p| Pattern::new(p).ok()).collect::<Vec<_>>())
+        .get_many::<Pattern>("paths")
+        .map(|v| v.collect::<Vec<_>>())
         .unwrap_or_default();
 
     let walk = hpk::walk(input)?;
 
-    fn matches_path(path: &Path, paths: &[Pattern]) -> bool {
+    fn matches_path(path: &Path, paths: &[&Pattern]) -> bool {
         if paths.is_empty() {
             return true;
         }

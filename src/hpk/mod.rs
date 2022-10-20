@@ -492,8 +492,8 @@ impl ExtractOptions {
         self.verbose = verbose;
     }
 
-    pub fn set_paths(&mut self, paths: &[String]) {
-        self.paths = paths.iter().filter_map(|s| Pattern::new(s).ok()).collect();
+    pub fn set_paths(&mut self, paths: &[Pattern]) {
+        self.paths = paths.to_vec();
     }
 
     fn matches(&self, path: &Path) -> bool {
