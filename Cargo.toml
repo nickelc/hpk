@@ -8,7 +8,8 @@ license = "GPL-3.0"
 authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 keywords = ["archive", "hpk"]
 categories = ["command-line-utilities"]
-edition = "2018"
+edition = "2021"
+rust-version = "1.60.0"
 include = ["src/**/*", "LICENSE", "README.md"]
 
 [features]
