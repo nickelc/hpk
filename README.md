@@ -93,21 +93,22 @@ Use the GitHub [Releases](https://github.com/nickelc/hpk/releases) tab to obtain
 ### hpk help
 ```
 $ hpk help
-hpk
+HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran, Surviving Mars etc.)
 
-USAGE:
-    hpk <SUBCOMMAND>
+Usage: hpk <COMMAND>
 
-FLAGS:
-    -h, --help       Prints help information
-    -V, --version    Prints version information
+Commands:
+  create   Create a new hpk archive
+  extract  Extract files from a hpk archive
+  list     List the content of a hpk archive
+  print    Print information of a hpk archive
+  help     Print this message or the help of the given subcommand(s)
 
-SUBCOMMANDS:
-    create     Create a new hpk archive
-    extract    Extract files from a hpk archive
-    list       List the content of a hpk archive
-    print      Print information of a hpk archive
-    help       Prints this message or the help of the given subcommand(s)
+Options:
+  -h, --help     Print help information
+  -V, --version  Print version information
+
+https://github.com/nickelc/hpk
 ```
 
 ### hpk list
@@ -125,74 +126,56 @@ water.lst
 ### hpk create
 ```text
 $ hpk create -h
-hpk-create
 Create a new hpk archive
 
-USAGE:
-    hpk create [FLAGS] [OPTIONS] <dir> <file>
+Usage: hpk create [OPTIONS] <dir> <file>
 
-FLAGS:
-        --compress
-            Compress the whole hpk file
+Arguments:
+  <dir>   input directory
+  <file>  hpk output file
 
-        --lz4
-            Sets LZ4 as encoder
+Options:
+      --compress
+          Compress the whole hpk file
+      --chunk-size <SIZE>
+          Default chunk size: 32768
+      --cripple-lua-files
+          Cripple bytecode header for Victor Vran or Surviving Mars
+      --with-filedates
+          Stores the last modification times in a _filedates file
+      --filedate-fmt <FORMAT>
+          Specifies the format of the stored filedates.
 
-        --cripple-lua-files
-            Cripple bytecode header for Victor Vran or Surviving Mars
-
-        --with-filedates
-            Stores the last modification times in a _filedates file
-
-    -h, --help
-            Prints help information
-
-        --dont-compress-files
-            No files are compressed. Overrides `--extensions`
-
-    -V, --version
-            Prints version information
-
-
-OPTIONS:
-        --chunk-size <SIZE>
-            Default chunk size: 32768
-
-        --extensions <EXT>...
-            Specifies the file extensions to be compressed. default: [lst,lua,xml,tga,dds,xtex,bin,csv]
-
-        --filedate-fmt <FORMAT>
-            Specifies the format of the stored filedates.
-
-            default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
-            short: 'Windows file time / 2000' used by Tropico 4 and Omerta
-
-ARGS:
-    <dir>     input directory
-    <file>    hpk output file
+          default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
+          short: 'Windows file time / 2000' used by Tropico 4 and Omerta
+      --dont-compress-files
+          No files are compressed. Overrides `--extensions`
+      --extensions <EXT>...
+          Specifies the file extensions to be compressed. default: [lst,lua,xml,tga,dds,xtex,bin,csv]
+      --lz4
+          Sets LZ4 as encoder
+  -h, --help
+          Print help information (use `--help` for more detail)
 ```
 
 ### hpk extract
 ```text
 $ hg extract -h
-hpk-extract
 Extract files from a hpk archive
 
-USAGE:
-    hpk extract [FLAGS] <file> <dest> [paths]...
+Usage: hpk extract [OPTIONS] <file> <dest> [paths]...
 
-FLAGS:
-        --ignore-filedates    Skip processing of a _filedates file and just extract it
-        --fix-lua-files       Fix the bytecode header of Surviving Mars' Lua files
-        --force               Force extraction if destination folder is not empty
-    -h, --help                Prints help information
-    -V, --version             Prints version information
-    -v                        Verbosely list files processed
+Arguments:
+  <file>      hpk archive
+  <dest>      destination folder
+  [paths]...  An optional list of archive members to be processed, separated by spaces.
 
-ARGS:
-    <file>        hpk archive
-    <dest>        destination folder
-    <paths>...    An optional list of archive members to be processed, separated by spaces.
+Options:
+      --ignore-filedates  Skip processing of a _filedates file and just extract it
+      --fix-lua-files     Fix the bytecode header of Victor Vran's or Surviving Mars' Lua files
+      --force             Force extraction if destination folder is not empty
+  -v                      Verbosely list files processed
+  -h, --help              Print help information
 ```
 
 ### hpk print
