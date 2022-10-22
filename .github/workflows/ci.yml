@@ -11,13 +11,8 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install rust (stable)
-        uses: hecrj/setup-rust-action@v1
-        with:
-          components: clippy, rustfmt
-
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Run clippy
         run: cargo clippy --all-features -- -D warnings
@@ -35,11 +30,8 @@ jobs:
     runs-on: ${{ matrix.os }}
 
     steps:
-      - name: Install rust
-        uses: hecrj/setup-rust-action@v1
-
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Fetch
         run: cargo fetch
@@ -52,13 +44,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install rust
-        uses: hecrj/setup-rust-action@v1
+      - name: Install rust (${{ env.minrust }})
+        uses: dtolnay/rust-toolchain@master
         with:
-          rust-version: ${{ env.minrust }}
+          toolchain: ${{ env.minrust }}
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Check
         run: cargo check --verbose
@@ -68,15 +60,12 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install rust
-        uses: hecrj/setup-rust-action@v1
-
       - name: Install gtk libs
         run: |
           sudo apt-get -yq --no-install-suggests --no-install-recommends install libgtk-3-dev
 
       - name: Checkout
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Check hpk-gtk
         run: cargo check --manifest-path hpk-gtk/Cargo.toml
@@ -87,12 +76,10 @@ jobs:
 
     steps:
       - name: Checkout sources
-        uses: actions/checkout@v2
+        uses: actions/checkout@v3
 
       - name: Install rust (nightly)
-        uses: hecrj/setup-rust-action@v1
-        with:
-          rust-version: nightly
+        uses: dtolnay/rust-toolchain@nightly
 
       - name: Check hpk
         run: cargo check
