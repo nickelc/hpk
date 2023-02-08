@@ -64,7 +64,7 @@ pub fn clap() -> Command {
         .arg(arg!(no_compress: --"dont-compress-files" "No files are compressed. Overrides `--extensions`"))
         .arg(arg!(--extensions <EXT>...)
                 .num_args(1..)
-                .use_value_delimiter(true)
+                .value_delimiter(',')
                 .next_line_help(true)
                 .long_help(EXTENSIONS_HELP))
         .arg(arg!(<dir> "input directory").value_parser(input_parser))
