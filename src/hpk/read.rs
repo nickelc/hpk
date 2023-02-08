@@ -207,7 +207,7 @@ mod tests {
     impl<T: Read + Seek> PrintState for FragmentedReader<T> {
         fn print_state(&mut self) {
             println!("pos: {}", self.pos);
-            println!("inner pos: {:?}", self.inner.seek(SeekFrom::Current(0)));
+            println!("inner pos: {:?}", self.inner.stream_position());
             print!("positions: ");
             for pos in &self.fragments {
                 print!("{} ", pos.end_pos);
