@@ -255,7 +255,7 @@ impl DirEntry {
 }
 
 pub fn get_compression<T: Read + Seek>(r: &mut T) -> HpkResult<Compression> {
-    let pos = r.seek(SeekFrom::Current(0))?;
+    let pos = r.stream_position()?;
     let compression = match Compression::read_from(r) {
         Ok(c) => c,
         Err(_) => Compression::None,
@@ -792,7 +792,7 @@ where
             // write _filedates in the root dir buffer
             if options.with_filedates() && entry.depth() == 0 {
                 let mut buf = Cursor::new(&filedates);
-                let position = w.seek(SeekFrom::Current(0))?;
+                let position = w.stream_position()?;
                 let n = io::copy(&mut buf, &mut w)?;
 
                 fragments.push(Fragment::new(position, n));
@@ -801,7 +801,7 @@ where
                 dent.write(&mut dir_buffer)?;
             }
 
-            let position = w.seek(SeekFrom::Current(0))?;
+            let position = w.stream_position()?;
             let mut r = Cursor::new(dir_buffer);
             let n = io::copy(&mut r, &mut w)?;
 
@@ -821,13 +821,13 @@ where
         }
     }
 
-    let fragmented_filesystem_offset = w.seek(SeekFrom::Current(0))?;
+    let fragmented_filesystem_offset = w.stream_position()?;
     let fragmented_filesystem_length = fragments.len() as u64 * 8;
     for fragment in fragments {
         fragment.write(&mut w)?;
     }
 
-    w.seek(SeekFrom::Start(0))?;
+    w.rewind()?;
     let header = Header::new(fragmented_filesystem_offset, fragmented_filesystem_length);
     header.write(&mut w)?;
 
@@ -853,7 +853,7 @@ where
         let _compress = options.extensions.contains(&ext);
 
         let mut fin = File::open(file)?;
-        let position = w.seek(SeekFrom::Current(0))?;
+        let position = w.stream_position()?;
         let n = if options.cripple_lua_files && &ext[..] == "lua" {
             let mut r = lua::cripple_header(&mut fin);
             if _compress {
