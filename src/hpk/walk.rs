@@ -9,15 +9,6 @@ use crate::read::FragmentedReader;
 use crate::{copy, get_compression};
 use crate::{DirEntry, Fragment, Header, HpkResult};
 
-macro_rules! itry {
-    ($e:expr) => {
-        match $e {
-            Ok(v) => v,
-            Err(err) => return Some(Err(From::from(err))),
-        }
-    };
-}
-
 pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
     let file = file.as_ref().to_path_buf();
     let (mut f, _tempdir) = {
@@ -143,7 +134,9 @@ impl HpkIter {
 
     fn handle_entry(&mut self, dent: DirEntry) -> Option<HpkResult<DirEntry>> {
         if dent.is_dir() {
-            itry!(self.push(&dent));
+            if let Err(e) = self.push(&dent) {
+                return Some(Err(e));
+            }
         }
         Some(Ok(dent))
     }
