@@ -19,6 +19,7 @@
 
 ## Supported games
 * Tropico 3-5
+* The First Templar
 * Omerta: City of Gangsters
 * Grand Ages: Rome
 * Victor Vran
