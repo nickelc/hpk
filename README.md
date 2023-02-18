@@ -36,7 +36,8 @@
     3. [`hpk create`](#hpk-create)
     4. [`hpk extract`](#hpk-extract)
     5. [`hpk debug-print`](#hpk-debug-print)
-5. [HPK File Format](#hpk-file-format)
+5. [GNU poke & pickle](#gnu-poke--pickle)
+6. [HPK File Format](#hpk-file-format)
 
 ## Compatibility Notes
 
@@ -242,6 +243,26 @@ file: index=8 depth=1 "water.lst"
  compressed: ZLIB inflated_length=1978 chunk_size=32768 chunks=1
   chunks: 0x10     len: 207
 ```
+
+## GNU poke & pickle
+
+[GNU poke] is an interactive, extensible editor for binary data. The [`hpk.pk`]
+pickle file contains type definitions to read `hpk` files.
+
+```poke
+(poke) .file files/English.hpk
+(poke) .load hpk.pk
+(poke) var hpk = Hpk_File @ 0#B
+(poke) hpk.fragments
+[Hpk_Fragment {offset=385311U#B,length=25U#B},Hpk_Fragment {offset=385293U#B,length=18U#B},Hpk_Fragment {offset=36U#B,length=385257U#B}]
+(poke) hpk.print_entries()
+Type   Index   Name
+d      2       CurrentLanguage
+       3       CurrentLanguage/Game.csv
+```
+
+[GNU poke]: http://www.jemarch.net/poke.html
+[`hpk.pk`]: ./hpk.pk
 
 ## HPK File Format
 

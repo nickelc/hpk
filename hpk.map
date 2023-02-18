@@ -1,0 +1,33 @@
+load hpk;
+
+var _hpk_map_file = Hpk_File @ 0#B;
+var _hpk_map_hdr = _hpk_map_file.hdr;
+
+%%
+
+%entry
+%name file
+%type Hpk_File
+%offset 0#B
+
+%entry
+%name hdr
+%type Hpk_Header
+%offset 0#B
+
+%entry
+%name fragments
+%type Hpk_Fragment[_hpk_map_hdr.fragmented_filesystem_length]
+%offset _hpk_map_hdr.fragmented_filesystem_offset
+
+%entry
+%name residuals
+%condition _hpk_map_hdr.fragments_residual_count > 0
+%type Hpk_Fragment[_hpk_map_hdr.fragments_residual_count]
+%offset _hpk_map_hdr.fragments_residual_offset
+
+%entry
+%name root
+%condition _hpk_map_file.fragments'length > 0
+%type Hpk_Entry[_hpk_map_file.fragments[0].length]
+%offset _hpk_map_file.fragments[0].offset

@@ -1,0 +1,145 @@
+// HPK implementation for GNU poke
+
+type Offset = offset<uint<32>, B>,
+     Length = offset<uint<32>, B>;
+
+type Hpk_Header = struct {
+    char[4] magic = ['B', 'P', 'U', 'L'];
+    Offset data_offset;
+    uint<32> fragment_per_file;
+    uint<32> unknown1 = 0xFFFFFFFF;
+    Offset fragments_residual_offset;
+    uint<32> fragments_residual_count;
+    uint<32> unknown2 = 1;
+    Offset fragmented_filesystem_offset;
+    Length fragmented_filesystem_length;
+};
+
+assert (Hpk_Header{}'size/#B == 36);
+
+var HPK_ENTRY_FILE = 0U;
+var HPK_ENTRY_DIR = 1U;
+
+type Hpk_Entry = struct {
+    uint<32> index;
+    uint<32> kind : kind in [HPK_ENTRY_FILE, HPK_ENTRY_DIR];
+
+    struct {
+        uint<16> size;
+        byte[size] value;
+
+        method _print = void: { print "#<" + catos(value) + ">"; }
+    } name;
+
+    method is_dir = int: { return kind == HPK_ENTRY_DIR; }
+    method is_file = int: { return kind == HPK_ENTRY_FILE; }
+    method get_name = string: { return catos(name.value); }
+
+    method _print = void: {
+        var prefix = is_file ? "#<File" : "#<Dir";
+        printf "%s{idx=%u32d,name=\"%s\"}>", prefix, index, get_name;
+    }
+};
+
+// Wrapper for array of `Hpk_Entry`
+type Hpk_Dir = struct {
+    Hpk_Entry[] entries;
+
+    method print_entries = void: {
+        var table = Pk_Table { num_columns = 3 };
+        table.row();
+        table.column("Type");
+        table.column("Index");
+        table.column("Name");
+        for (e in entries) {
+            table.row();
+            table.column(e.is_dir ? "d" : "-");
+            table.column(format("%u32d", e.index));
+            table.column(e.get_name);
+        }
+        table.print_table;
+    }
+};
+
+var HPK_COMPRESSION_ZLIB = ['Z', 'L', 'I', 'B'];
+var HPK_COMPRESSION_LZ4  = ['L', 'Z', '4', ' '];
+var HPK_COMPRESSION_ZSTD = ['Z', 'S', 'T', 'D'];
+
+type Hpk_Entry_Compressed_Header = struct {
+    char[4] magic : magic == HPK_COMPRESSION_ZLIB
+                    || magic == HPK_COMPRESSION_LZ4
+                    || magic == HPK_COMPRESSION_ZSTD;
+    uint<32> inflated_length;
+    uint<32> chunk_size;
+
+    union {
+        Offset single : single == 0x10#B;
+        struct {
+            Offset first;
+            Offset[first - 16U#B] rest;
+        } data;
+    } chunks;
+
+    computed Offset[] offsets;
+
+    method get_offsets = Offset[]: {
+        try {
+            return [chunks.single];
+        } catch if E_elem {
+            return [chunks.data.first] + chunks.data.rest;
+        }
+    }
+};
+
+type Hpk_Fragment = struct {
+    Offset offset;
+    Length length;
+};
+
+type Hpk_File = struct {
+    Hpk_Header hdr;
+
+    Hpk_Fragment[hdr.fragments_residual_count] residuals @ hdr.fragments_residual_offset;
+    Hpk_Fragment[hdr.fragmented_filesystem_length] fragments @ hdr.fragmented_filesystem_offset;
+
+    computed Hpk_Entry[] root;
+
+    fun _get_dir_entries = (uint<32> idx) Hpk_Entry[]: {
+        return Hpk_Entry[fragments[idx].length] @ fragments[idx].offset;
+    }
+
+    method filesystem_entries = uint<64>: {
+        return hdr.fragmented_filesystem_length / (Hpk_Fragment{}'size * hdr.fragment_per_file);
+    }
+
+    method get_root = Hpk_Entry[]: {
+        return _get_dir_entries(0);
+    }
+
+    method print_entries = void: {
+        fun list_dir = (Pk_Table table, string parent, Hpk_Entry[] entries) void: {
+            for (e in entries) {
+                var name = parent == "" ? e.get_name : parent + "/" + e.get_name;
+                table.row();
+                table.column(e.is_dir ? "d" : "");
+                table.column(format("%u32d", e.index));
+                table.column(name);
+                if (e.is_dir) {
+                    // The index values start at `1`.
+                    var entries = _get_dir_entries(e.index - 1);
+                    list_dir(table, name, entries);
+                }
+            }
+        }
+
+        var table = Pk_Table { num_columns = 3 };
+        table.row();
+        table.column("Type");
+        table.column("Index");
+        table.column("Name");
+
+        list_dir(table, "", get_root());
+
+        table.print_table;
+    }
+};
