@@ -29,10 +29,10 @@ fn main() -> CliResult {
         .after_help("https://github.com/nickelc/hpk")
         .subcommand_required(true)
         .arg_required_else_help(true)
-        .subcommand(commands::create::clap())
-        .subcommand(commands::extract::clap())
-        .subcommand(commands::list::clap())
-        .subcommand(commands::print::clap())
+        .subcommand(commands::create::cmd())
+        .subcommand(commands::extract::cmd())
+        .subcommand(commands::list::cmd())
+        .subcommand(commands::print::cmd())
         .get_matches();
 
     match matches.subcommand() {
