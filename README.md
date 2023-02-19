@@ -35,7 +35,7 @@
     2. [`hpk list`](#hpk-list)
     3. [`hpk create`](#hpk-create)
     4. [`hpk extract`](#hpk-extract)
-    5. [`hpk print`](#hpk-print)
+    5. [`hpk debug-print`](#hpk-debug-print)
 5. [HPK File Format](#hpk-file-format)
 
 ## Compatibility Notes
@@ -99,11 +99,11 @@ HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran, 
 Usage: hpk <COMMAND>
 
 Commands:
-  create   Create a new hpk archive
-  extract  Extract files from a hpk archive
-  list     List the content of a hpk archive
-  print    Print information of a hpk archive
-  help     Print this message or the help of the given subcommand(s)
+  create       Create a new hpk archive
+  extract      Extract files from a hpk archive
+  list         List the content of a hpk archive
+  debug-print  Print debug information of a hpk archive
+  help         Print this message or the help of the given subcommand(s)
 
 Options:
   -h, --help     Print help information
@@ -179,9 +179,9 @@ Options:
   -h, --help              Print help information
 ```
 
-### hpk print
+### hpk debug-print
 ```bash
-$ hpk print files/omerta/Packs/TextureLists.hpk
+$ hpk debug-print files/omerta/Packs/TextureLists.hpk
 reading file: files/omerta/Packs/TextureLists.hpk
 header:
   data_offset: 0x24

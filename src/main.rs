@@ -39,7 +39,7 @@ fn main() -> CliResult {
         Some(("create", matches)) => commands::create::execute(matches)?,
         Some(("extract", matches)) => commands::extract::execute(matches)?,
         Some(("list", matches)) => commands::list::execute(matches)?,
-        Some(("print", matches)) => commands::print::execute(matches)?,
+        Some(("debug-print", matches)) => commands::print::execute(matches)?,
         _ => unreachable!(),
     };
     Ok(())
