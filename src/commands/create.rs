@@ -32,7 +32,7 @@ short: 'Windows file time / 2000' used by Tropico 4 and Omerta";
 const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
                                default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
 
-pub fn clap() -> Command {
+pub fn cmd() -> Command {
     fn input_parser(value: &str) -> Result<PathBuf, String> {
         let dir = Path::new(value);
         if let Ok(md) = dir.metadata() {
