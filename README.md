@@ -106,8 +106,8 @@ Commands:
   help         Print this message or the help of the given subcommand(s)
 
 Options:
-  -h, --help     Print help information
-  -V, --version  Print version information
+  -h, --help     Print help
+  -V, --version  Print version
 
 https://github.com/nickelc/hpk
 ```
@@ -132,31 +132,42 @@ Create a new hpk archive
 Usage: hpk create [OPTIONS] <dir> <file>
 
 Arguments:
-  <dir>   input directory
-  <file>  hpk output file
+  <dir>
+          input directory
+
+  <file>
+          hpk output file
 
 Options:
       --compress
           Compress the whole hpk file
+
       --chunk-size <SIZE>
           Default chunk size: 32768
+
       --cripple-lua-files
           Cripple bytecode header for Victor Vran or Surviving Mars
+
       --with-filedates
           Stores the last modification times in a _filedates file
+
       --filedate-fmt <FORMAT>
           Specifies the format of the stored filedates.
 
           default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
           short: 'Windows file time / 2000' used by Tropico 4 and Omerta
+
       --dont-compress-files
           No files are compressed. Overrides `--extensions`
+
       --extensions <EXT>...
           Specifies the file extensions to be compressed. default: [lst,lua,xml,tga,dds,xtex,bin,csv]
+
       --lz4
           Sets LZ4 as encoder
+
   -h, --help
-          Print help information (use `--help` for more detail)
+          Print help (see a summary with '-h')
 ```
 
 ### hpk extract
@@ -176,7 +187,7 @@ Options:
       --fix-lua-files     Fix the bytecode header of Victor Vran's or Surviving Mars' Lua files
       --force             Force extraction if destination folder is not empty
   -v                      Verbosely list files processed
-  -h, --help              Print help information
+  -h, --help              Print help
 ```
 
 ### hpk debug-print
