@@ -9,7 +9,7 @@ authors = ["Constantin Nickel <constantin.nickel@gmail.com>"]
 keywords = ["archive", "hpk"]
 categories = ["command-line-utilities"]
 edition = "2021"
-rust-version = "1.60.0"
+rust-version = "1.64.0"
 include = ["src/**/*", "LICENSE", "README.md"]
 
 [features]

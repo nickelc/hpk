@@ -7,7 +7,7 @@
 
 [crates-badge]: https://img.shields.io/crates/v/hpk.svg
 [crates-url]: https://crates.io/crates/hpk
-[rust-version]: https://img.shields.io/badge/rust-1.60%2B-blue.svg
+[rust-version]: https://img.shields.io/badge/rust-1.64%2B-blue.svg
 [actions-badge]: https://github.com/nickelc/hpk/workflows/ci/badge.svg
 [actions-url]: https://github.com/nickelc/hpk/actions
 [downloads-badge]: https://img.shields.io/github/downloads/nickelc/hpk/total?color=red
