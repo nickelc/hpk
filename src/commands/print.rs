@@ -14,11 +14,12 @@ pub fn cmd() -> Command {
         }
     }
 
-    Command::new("print")
-        .about("Print information of a hpk archive")
+    Command::new("debug-print")
+        .about("Print debug information of a hpk archive")
+        .alias("print")
         .display_order(30)
         .arg(arg!(<file> "hpk archive").value_parser(input_parser))
-        .arg(arg!(header: --"header-only" "Print only the header informations"))
+        .arg(arg!(header: --"header-only" "Print only the header information"))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
