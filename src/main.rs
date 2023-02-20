@@ -6,6 +6,7 @@ use clap::Command;
 pub enum Error {
     Hpk(hpk::HpkError),
     Clap(clap::Error),
+    Io(std::io::Error),
 }
 
 impl From<hpk::HpkError> for Error {
@@ -17,6 +18,12 @@ impl From<hpk::HpkError> for Error {
 impl From<clap::Error> for Error {
     fn from(e: clap::Error) -> Error {
         Error::Clap(e)
+    }
+}
+
+impl From<std::io::Error> for Error {
+    fn from(e: std::io::Error) -> Self {
+        Error::Io(e)
     }
 }
 
@@ -32,6 +39,7 @@ fn main() -> CliResult {
         .subcommand(commands::create::cmd())
         .subcommand(commands::extract::cmd())
         .subcommand(commands::list::cmd())
+        .subcommand(commands::pickle::cmd())
         .subcommand(commands::print::cmd())
         .get_matches();
 
@@ -39,6 +47,7 @@ fn main() -> CliResult {
         Some(("create", matches)) => commands::create::execute(matches)?,
         Some(("extract", matches)) => commands::extract::execute(matches)?,
         Some(("list", matches)) => commands::list::execute(matches)?,
+        Some(("pickle", matches)) => commands::pickle::execute(matches)?,
         Some(("debug-print", matches)) => commands::print::execute(matches)?,
         _ => unreachable!(),
     };

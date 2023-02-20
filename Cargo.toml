@@ -10,7 +10,7 @@ keywords = ["archive", "hpk"]
 categories = ["command-line-utilities"]
 edition = "2021"
 rust-version = "1.64.0"
-include = ["src/**/*", "LICENSE", "README.md"]
+include = ["src/**/*", "hpk.pk", "hpk.map", "LICENSE", "README.md"]
 
 [features]
 lz4frame = ["lz4"]
