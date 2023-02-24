@@ -293,10 +293,9 @@ pub fn compress(options: &CompressOptions, r: &mut dyn Read, w: &mut dyn Write) 
         let position = output_buffer.len() as u32;
         offsets.push(position);
 
-        let mut chunk = Cursor::new(chunk);
         match options.compressor {
-            Compression::Zlib => compress::Zlib::encode_chunk(&mut chunk, &mut output_buffer)?,
-            Compression::Lz4 => compress::Lz4Block::encode_chunk(&mut chunk, &mut output_buffer)?,
+            Compression::Zlib => compress::Zlib::encode_chunk(&chunk, &mut output_buffer)?,
+            Compression::Lz4 => compress::Lz4Block::encode_chunk(&chunk, &mut output_buffer)?,
             _ => unreachable!(),
         };
     }
@@ -316,7 +315,7 @@ fn decompress<T: compress::Decoder>(
     for chunk in &hdr.chunks {
         let mut buf = vec![0; chunk.length as usize];
         r.read_exact(&mut buf)?;
-        written += match T::decode_chunk(&mut Cursor::new(&buf), w) {
+        written += match T::decode_chunk(&buf, w) {
             Ok(n) => n,
             Err(_) => {
                 // chunk seems to be not compressed
