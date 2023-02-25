@@ -21,9 +21,8 @@ pub use crate::walk::{walk, HpkIter};
 const HPK_SIG: [u8; 4] = *b"BPUL";
 const HEADER_LENGTH: u8 = 36;
 
-/// The Windows epoch starts 1601-01-01T00:00:00Z. It's SEC_TO_UNIX_EPOCH seconds
+/// The Windows epoch starts 1601-01-01T00:00:00Z. It's `SEC_TO_UNIX_EPOCH` seconds
 /// before the Unix epoch 1970-01-01T00:00:00Z.
-///
 const SEC_TO_UNIX_EPOCH: i64 = 11_644_473_600;
 const WINDOWS_TICKS: i64 = 10_000_000;
 
@@ -68,7 +67,7 @@ impl Header {
             _identifier: HPK_SIG,
             data_offset: 36,
             fragments_per_file: 1,
-            _unknown2: 0xFFFFFFFF,
+            _unknown2: 0xFFFF_FFFF,
             fragments_residual_offset: 0,
             fragments_residual_count: 0,
             _unknown5: 1,
@@ -173,8 +172,7 @@ impl DirEntry {
 
     pub fn index(&self) -> usize {
         match self.ft {
-            FileType::Dir(idx) => idx,
-            FileType::File(idx) => idx,
+            FileType::Dir(idx) | FileType::File(idx) => idx,
         }
     }
 
@@ -246,7 +244,7 @@ impl DirEntry {
         let name = self
             .path
             .file_name()
-            .and_then(|s| s.to_str())
+            .and_then(OsStr::to_str)
             .ok_or(HpkError::InvalidDirEntryName)?;
         w.write_u16::<LE>(name.len() as u16)?;
         w.write_all(name.as_bytes())?;
@@ -544,8 +542,8 @@ where
                     } else {
                         let ext = path
                             .extension()
-                            .and_then(|s| s.to_str())
-                            .map_or("".to_string(), |s| s.to_ascii_lowercase());
+                            .and_then(OsStr::to_str)
+                            .map_or(String::new(), str::to_ascii_lowercase);
 
                         if options.fix_lua_files && &ext[..] == "lua" {
                             let out = File::create(path)?;
@@ -643,7 +641,7 @@ impl Default for CreateOptions {
     fn default() -> Self {
         Self {
             compress: false,
-            compress_options: Default::default(),
+            compress_options: CompressOptions::default(),
             cripple_lua_files: false,
             extensions: vec![
                 "lst".into(),
@@ -754,7 +752,7 @@ where
             let tmpfile = tempdir.path().join(
                 file.as_ref()
                     .file_name()
-                    .and_then(|s| s.to_str())
+                    .and_then(OsStr::to_str)
                     .unwrap_or("temp.hpk"),
             );
             (File::create(&tmpfile)?, Some(tmpfile), Some(tempdir))
@@ -847,8 +845,8 @@ where
     {
         let ext = file
             .extension()
-            .and_then(|s| s.to_str())
-            .map_or("".to_string(), |s| s.to_ascii_lowercase());
+            .and_then(OsStr::to_str)
+            .map_or(String::new(), str::to_ascii_lowercase);
         let _compress = options.extensions.contains(&ext);
 
         let mut fin = File::open(file)?;

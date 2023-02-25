@@ -1,3 +1,4 @@
+use std::ffi::OsStr;
 use std::fs::File;
 use std::io::prelude::*;
 use std::io::Cursor;
@@ -18,7 +19,7 @@ pub fn walk<P: AsRef<Path>>(file: P) -> HpkResult<HpkIter> {
             let tempdir = tempfile::Builder::new().prefix("hpk").tempdir()?;
             let tmpfile = tempdir.path().join(
                 file.file_name()
-                    .and_then(|s| s.to_str())
+                    .and_then(OsStr::to_str)
                     .unwrap_or("temp.hpk"),
             );
 
@@ -121,8 +122,7 @@ impl HpkIter {
     {
         if !entry.is_dir() {
             let fragments = &self.fragments[entry.index()];
-            let fragments: Vec<_> = fragments.to_vec();
-            let r = FragmentedReader::new(&self.f, &fragments);
+            let r = FragmentedReader::new(&self.f, fragments);
             op(r)?;
         }
         Ok(())
@@ -160,10 +160,10 @@ impl Iterator for DirList {
     type Item = HpkResult<DirEntry>;
 
     fn next(&mut self) -> Option<HpkResult<DirEntry>> {
-        if !self.entries.is_empty() {
-            Some(Ok(self.entries.remove(0)))
-        } else {
+        if self.entries.is_empty() {
             None
+        } else {
+            Some(Ok(self.entries.remove(0)))
         }
     }
 }

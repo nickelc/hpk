@@ -1,6 +1,3 @@
-use hpk;
-use tempfile;
-
 use std::env;
 use std::fs;
 use std::io;
@@ -22,7 +19,7 @@ fn create_extract_and_compress() {
     fn create_file(path: &str, content: Option<&[u8]>) {
         let mut file = fs::File::create(path).unwrap();
         if let Some(content) = content {
-            file.write(content).unwrap();
+            file.write_all(content).unwrap();
         }
     }
 
@@ -45,7 +42,7 @@ fn create_extract_and_compress() {
     create_file("test1/two_bytes", Some("AB".as_bytes()));
 
     {
-        let options = Default::default();
+        let options = hpk::CreateOptions::default();
         hpk::create(&options, "test1", "test1.hpk").unwrap();
     }
 
@@ -87,7 +84,7 @@ fn create_extract_and_compress() {
     {
         let mut file = fs::File::open("test1.hpk").unwrap();
         let mut out = fs::File::create("test1-compressed.hpk").unwrap();
-        let options = Default::default();
+        let options = hpk::CompressOptions::default();
         hpk::compress(&options, &mut file, &mut out).unwrap();
     }
 

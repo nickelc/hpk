@@ -10,8 +10,7 @@ pub fn cmd() -> Command {
         let file = Path::new(value);
         match file.metadata() {
             Ok(ref md) if md.is_file() => Ok(file.to_path_buf()),
-            Ok(_) => Err(String::from("Not a valid file")),
-            Err(_) => Err(String::from("Not a valid file")),
+            Ok(_) | Err(_) => Err(String::from("Not a valid file")),
         }
     }
 
@@ -26,7 +25,7 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     let input = matches.get_one::<PathBuf>("file").expect("required arg");
     let paths = matches
         .get_many::<Pattern>("paths")
-        .map(|v| v.collect::<Vec<_>>())
+        .map(Iterator::collect::<Vec<_>>)
         .unwrap_or_default();
 
     let walk = hpk::walk(input)?;

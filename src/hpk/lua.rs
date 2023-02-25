@@ -125,12 +125,12 @@ where
     F: Fn(&mut R, &mut [u8]) -> io::Result<usize>,
 {
     fn read(&mut self, buf: &mut [u8]) -> io::Result<usize> {
-        if !self.done {
+        if self.done {
+            self.inner.read(buf)
+        } else {
             let res = (self.func)(&mut self.inner, buf);
             self.done = true;
             res
-        } else {
-            self.inner.read(buf)
         }
     }
 }
@@ -141,12 +141,12 @@ where
     F: Fn(&mut W, &[u8]) -> io::Result<usize>,
 {
     fn write(&mut self, buf: &[u8]) -> io::Result<usize> {
-        if !self.done {
+        if self.done {
+            self.inner.write(buf)
+        } else {
             let res = (self.func)(&mut self.inner, buf);
             self.done = true;
             res
-        } else {
-            self.inner.write(buf)
         }
     }
 
@@ -241,11 +241,10 @@ mod tests {
 
     #[test]
     fn header_rewrite() {
-        let mut input = io::Cursor::new(vec![]);
+        let mut input = LUA_VALID_HEADER_64.to_vec();
+        input.extend_from_slice(&[0xCA, 0xFE, 0xCA, 0xFE]);
+        let mut input = io::Cursor::new(input);
         let mut buf = io::Cursor::new(vec![]);
-        input.write(&LUA_VALID_HEADER_64).unwrap();
-        input.write(&[0xCA, 0xFE, 0xCA, 0xFE]).unwrap();
-        input.set_position(0);
 
         {
             let mut wrapper = cripple_header(&mut input);

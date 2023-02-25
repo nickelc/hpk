@@ -9,8 +9,7 @@ pub fn cmd() -> Command {
         let path = Path::new(value);
         match path.metadata() {
             Ok(ref md) if md.is_file() => Ok(path.to_path_buf()),
-            Ok(_) => Err(String::from("Not a valid file")),
-            Err(_) => Err(String::from("Not a valid file")),
+            Ok(_) | Err(_) => Err(String::from("Not a valid file")),
         }
     }
 
