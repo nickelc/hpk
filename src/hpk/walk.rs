@@ -87,18 +87,14 @@ impl Iterator for HpkIter {
 
     fn next(&mut self) -> Option<HpkResult<DirEntry>> {
         if let Some(dent) = self.start.take() {
-            if let Some(result) = self.handle_entry(dent) {
-                return Some(result);
-            }
+            return Some(self.handle_entry(dent));
         }
         while !self.stack_list.is_empty() {
             match self.stack_list.last_mut().expect("bug?").next() {
                 None => self.pop(),
                 Some(Err(err)) => return Some(Err(err)),
                 Some(Ok(dent)) => {
-                    if let Some(result) = self.handle_entry(dent) {
-                        return Some(result);
-                    }
+                    return Some(self.handle_entry(dent));
                 }
             }
         }
@@ -132,13 +128,11 @@ impl HpkIter {
         Ok(())
     }
 
-    fn handle_entry(&mut self, dent: DirEntry) -> Option<HpkResult<DirEntry>> {
+    fn handle_entry(&mut self, dent: DirEntry) -> HpkResult<DirEntry> {
         if dent.is_dir() {
-            if let Err(e) = self.push(&dent) {
-                return Some(Err(e));
-            }
+            self.push(&dent)?;
         }
-        Some(Ok(dent))
+        Ok(dent)
     }
 
     fn push(&mut self, dent: &DirEntry) -> HpkResult<()> {
