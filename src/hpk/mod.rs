@@ -150,14 +150,33 @@ impl Fragment {
     }
 }
 
-enum FileType {
-    Dir(usize),
-    File(usize),
+#[derive(Copy, Clone)]
+enum EntryType {
+    Dir,
+    File,
+}
+
+impl EntryType {
+    fn to_value(self) -> u32 {
+        match self {
+            Self::Dir => 1,
+            Self::File => 0,
+        }
+    }
+
+    fn from_value(value: u32) -> Self {
+        if value == 0 {
+            Self::File
+        } else {
+            Self::Dir
+        }
+    }
 }
 
 pub struct DirEntry {
     path: PathBuf,
-    ft: FileType,
+    kind: EntryType,
+    index: usize,
     depth: usize,
 }
 
@@ -171,9 +190,7 @@ impl DirEntry {
     }
 
     pub fn index(&self) -> usize {
-        match self.ft {
-            FileType::Dir(idx) | FileType::File(idx) => idx,
-        }
+        self.index
     }
 
     pub fn depth(&self) -> usize {
@@ -181,13 +198,14 @@ impl DirEntry {
     }
 
     pub fn is_dir(&self) -> bool {
-        std::matches!(self.ft, FileType::Dir(_))
+        std::matches!(self.kind, EntryType::Dir)
     }
 
     fn new_root() -> Self {
         DirEntry {
             path: PathBuf::new(),
-            ft: FileType::Dir(0),
+            kind: EntryType::Dir,
+            index: 0,
             depth: 0,
         }
     }
@@ -195,7 +213,8 @@ impl DirEntry {
     fn new_dir<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
         DirEntry {
             path: path.as_ref().to_path_buf(),
-            ft: FileType::Dir(index),
+            kind: EntryType::Dir,
+            index,
             depth,
         }
     }
@@ -203,7 +222,8 @@ impl DirEntry {
     fn new_file<P: AsRef<Path>>(path: P, index: usize, depth: usize) -> Self {
         DirEntry {
             path: path.as_ref().to_path_buf(),
-            ft: FileType::File(index),
+            kind: EntryType::File,
+            index,
             depth,
         }
     }
@@ -214,13 +234,7 @@ impl DirEntry {
             .checked_sub(1)
             .ok_or(HpkError::InvalidFragmentIndex)?;
 
-        let ft = r.read_u32::<LE>().map(|t| {
-            if t == 0 {
-                FileType::File(fragment_index as usize)
-            } else {
-                FileType::Dir(fragment_index as usize)
-            }
-        })?;
+        let kind = r.read_u32::<LE>().map(EntryType::from_value)?;
 
         let name_length = r.read_u16::<LE>()?;
         let mut buf = vec![0; name_length as usize];
@@ -229,18 +243,15 @@ impl DirEntry {
 
         Ok(DirEntry {
             path: parent.join(name),
-            ft,
+            kind,
+            index: fragment_index as usize,
             depth,
         })
     }
 
     fn write(&self, w: &mut dyn Write) -> HpkResult<()> {
-        let (index, _type) = match self.ft {
-            FileType::Dir(index) => (index, 1),
-            FileType::File(index) => (index, 0),
-        };
-        w.write_u32::<LE>(index as u32)?;
-        w.write_u32::<LE>(_type)?;
+        w.write_u32::<LE>(self.index as u32)?;
+        w.write_u32::<LE>(self.kind.to_value())?;
         let name = self
             .path
             .file_name()
