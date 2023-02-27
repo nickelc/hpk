@@ -751,9 +751,7 @@ where
     }
     // }}}
 
-    let walkdir = WalkDir::new(&dir)
-        .contents_first(true)
-        .sort_by(|a, b| a.file_name().cmp(b.file_name()));
+    let walkdir = WalkDir::new(&dir).contents_first(true).sort_by_file_name();
     let mut fragments: Vec<Fragment> = vec![];
     let mut stack = HashMap::new();
 
