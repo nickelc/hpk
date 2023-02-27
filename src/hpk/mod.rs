@@ -751,10 +751,6 @@ where
     }
     // }}}
 
-    let walkdir = WalkDir::new(&dir).contents_first(true).sort_by_file_name();
-    let mut fragments: Vec<Fragment> = vec![];
-    let mut stack = HashMap::new();
-
     let (mut w, tmpfile, _tmpdir) = {
         if options.compress {
             let tempdir = tempfile::Builder::new().prefix("hpk").tempdir()?;
@@ -771,7 +767,12 @@ where
     };
 
     w.seek(SeekFrom::Start(u64::from(HEADER_LENGTH)))?;
+
     let mut filedates = vec![];
+    let mut fragments: Vec<Fragment> = vec![];
+    let mut stack = HashMap::new();
+
+    let walkdir = WalkDir::new(&dir).contents_first(true).sort_by_file_name();
 
     for entry in walkdir {
         let entry = entry?;
