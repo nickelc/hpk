@@ -2,9 +2,6 @@ name: ci
 
 on: [push, pull_request]
 
-env:
-  minrust: 1.64.0
-
 jobs:
   lint:
     name: Rustfmt and clippy
@@ -44,13 +41,17 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Install rust (${{ env.minrust }})
-        uses: dtolnay/rust-toolchain@master
-        with:
-          toolchain: ${{ env.minrust }}
-
       - name: Checkout
         uses: actions/checkout@v3
+
+      - name: Get MSRV from package metadata
+        id: msrv
+        run: grep rust-version Cargo.toml | cut -d'"' -f2 | sed 's/^/version=/' >> $GITHUB_OUTPUT
+
+      - name: Install rust (${{ steps.msrv.outputs.version }})
+        uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: ${{ steps.msrv.outputs.version }}
 
       - name: Check
         run: cargo check --verbose
