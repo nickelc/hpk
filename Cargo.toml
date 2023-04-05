@@ -40,7 +40,7 @@ default-features = false
 [dependencies.clap]
 default-features = false
 features = ["std", "cargo", "help", "usage", "error-context"]
-version = "4.1"
+version = "4.2"
 
 [dependencies.lz4]
 version="1"
