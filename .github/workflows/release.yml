@@ -53,10 +53,6 @@ jobs:
       - name: Build
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Strip release binary
-        if: runner.os == 'Linux' || runner.os == 'macOS'
-        run: strip "target/${{ matrix.target }}/release/hpk"
-
       - name: Package
         id: package
         shell: bash
