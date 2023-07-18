@@ -132,42 +132,31 @@ Create a new hpk archive
 Usage: hpk create [OPTIONS] <dir> <file>
 
 Arguments:
-  <dir>
-          input directory
-
-  <file>
-          hpk output file
+  <dir>   input directory
+  <file>  hpk output file
 
 Options:
       --compress
           Compress the whole hpk file
-
       --chunk-size <SIZE>
           Default chunk size: 32768
-
       --cripple-lua-files
           Cripple bytecode header for Victor Vran or Surviving Mars
-
       --with-filedates
           Stores the last modification times in a _filedates file
-
       --filedate-fmt <FORMAT>
           Specifies the format of the stored filedates.
 
           default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
           short: 'Windows file time / 2000' used by Tropico 4 and Omerta
-
       --dont-compress-files
           No files are compressed. Overrides `--extensions`
-
       --extensions <EXT>...
           Specifies the file extensions to be compressed. default: [lst,lua,xml,tga,dds,xtex,bin,csv]
-
       --lz4
           Sets LZ4 as encoder
-
   -h, --help
-          Print help (see a summary with '-h')
+          Print help (see more with '--help')
 ```
 
 ### hpk extract
