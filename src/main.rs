@@ -32,6 +32,7 @@ fn main() -> CliResult {
         .subcommand(commands::create::cmd())
         .subcommand(commands::extract::cmd())
         .subcommand(commands::list::cmd())
+        .subcommand(commands::merge::cmd())
         .subcommand(commands::print::cmd())
         .get_matches();
 
@@ -39,6 +40,7 @@ fn main() -> CliResult {
         Some(("create", matches)) => commands::create::execute(matches)?,
         Some(("extract", matches)) => commands::extract::execute(matches)?,
         Some(("list", matches)) => commands::list::execute(matches)?,
+        Some(("merge", matches)) => commands::merge::execute(matches)?,
         Some(("debug-print", matches)) => commands::print::execute(matches)?,
         _ => unreachable!(),
     };

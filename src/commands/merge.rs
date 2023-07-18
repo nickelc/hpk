@@ -1,57 +1,20 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
-use clap::builder::{EnumValueParser, PathBufValueParser, PossibleValue};
+use clap::builder::{EnumValueParser, PathBufValueParser};
 use clap::{arg, ArgMatches, Command};
 
+use crate::commands::create::{FileDateFormat, EXTENSIONS_HELP, FILETIME_FMT_HELP};
 use crate::CliResult;
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum FileDateFormat {
-    Default,
-    Short,
-}
-
-impl clap::ValueEnum for FileDateFormat {
-    fn value_variants<'a>() -> &'a [Self] {
-        &[Self::Default, Self::Short]
-    }
-
-    fn to_possible_value(&self) -> Option<PossibleValue> {
-        match self {
-            Self::Default => Some(PossibleValue::new("default")),
-            Self::Short => Some(PossibleValue::new("short")),
-        }
-    }
-}
-
-pub const FILETIME_FMT_HELP: &str = "Specifies the format of the stored filedates.
-
-default: 'Windows file time' used by Tropico 3 and Grand Ages: Rome
-short: 'Windows file time / 2000' used by Tropico 4 and Omerta";
-
-pub const EXTENSIONS_HELP: &str = "Specifies the file extensions to be compressed. \
-                               default: [lst,lua,xml,tga,dds,xtex,bin,csv]";
-
 pub fn cmd() -> Command {
-    fn input_parser(value: &str) -> Result<PathBuf, String> {
-        let dir = Path::new(value);
-        if let Ok(md) = dir.metadata() {
-            if md.is_dir() {
-                return Ok(dir.to_path_buf());
-            }
-        }
-        Err(String::from("Not a valid directory"))
-    }
-
-    Command::new("create")
-        .about("Create a new hpk archive")
+    Command::new("merge")
+        .about("Merge a new hpk archive")
         .display_order(0)
         .arg(arg!(--compress "Compress the whole hpk file").display_order(0))
         .arg(arg!(--lz4 "Sets LZ4 as encoder").display_order(10))
         .arg(arg!(chunk_size: --"chunk-size" <SIZE> "Default chunk size: 32768")
                 .value_parser(clap::value_parser!(u32))
                 .next_line_help(true))
-        .arg(arg!(cripple_lua: --"cripple-lua-files" "Cripple bytecode header for Victor Vran or Surviving Mars"))
         .arg(arg!(--"with-filedates" "Stores the last modification times in a _filedates file"))
         .arg(
             arg!(--"filedate-fmt" <FORMAT>)
@@ -67,13 +30,13 @@ pub fn cmd() -> Command {
                 .value_delimiter(',')
                 .next_line_help(true)
                 .long_help(EXTENSIONS_HELP))
-        .arg(arg!(<dir> "input directory").value_parser(input_parser))
-        .arg(arg!(<file> "hpk output file").value_parser(PathBufValueParser::new()))
+        .arg(arg!(<input>... "input files").value_parser(PathBufValueParser::new()))
+        .arg(arg!(<output> "hpk output file").value_parser(PathBufValueParser::new()))
 }
 
 pub fn execute(matches: &ArgMatches) -> CliResult {
-    let input = matches.get_one::<PathBuf>("dir").expect("required arg");
-    let file = matches.get_one::<PathBuf>("file").expect("required arg");
+    let input = matches.get_many::<PathBuf>("input").expect("required arg");
+    let output = matches.get_one::<PathBuf>("output").expect("required arg");
 
     let mut options = hpk::CreateOptions::new();
     if matches.get_flag("compress") {
@@ -81,9 +44,6 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
     }
     if matches.get_flag("lz4") {
         options.use_lz4();
-    }
-    if matches.get_flag("cripple_lua") {
-        options.cripple_lua_files();
     }
     if let Some(chunk_size) = matches.get_one::<u32>("chunk_size") {
         options.with_chunk_size(*chunk_size);
@@ -101,6 +61,6 @@ pub fn execute(matches: &ArgMatches) -> CliResult {
         options.with_extensions(Vec::new());
     }
 
-    hpk::create(&options, input, file)?;
+    hpk::merge(&options, input.collect(), output)?;
     Ok(())
 }

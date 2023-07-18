@@ -518,9 +518,10 @@ impl ExtractOptions {
 }
 // }}}
 
-pub fn extract<P>(options: &ExtractOptions, file: P, dest: P) -> HpkResult<()>
+pub fn extract<I, O>(options: &ExtractOptions, file: I, dest: O) -> HpkResult<()>
 where
-    P: AsRef<Path>,
+    I: AsRef<Path>,
+    O: AsRef<Path>,
 {
     let file = file.as_ref();
     let dest = dest.as_ref();
@@ -730,9 +731,10 @@ impl CreateOptions {
 }
 // }}}
 
-pub fn create<P>(options: &CreateOptions, dir: P, file: P) -> HpkResult<()>
+pub fn create<I, O>(options: &CreateOptions, dir: I, file: O) -> HpkResult<()>
 where
-    P: AsRef<Path>,
+    I: AsRef<Path>,
+    O: AsRef<Path>,
 {
     use std::collections::HashMap;
     use walkdir::WalkDir;
@@ -877,6 +879,28 @@ where
         Ok(Fragment::new(position, n))
     }
     // }}}
+}
+
+pub fn merge<I, O>(options: &CreateOptions, files: Vec<I>, out: O) -> HpkResult<()>
+where
+    I: AsRef<Path>,
+    O: AsRef<Path>,
+{
+    let merge_output = tempfile::Builder::new().prefix("hpk-merge").tempdir()?;
+    let extract_opts = ExtractOptions::new();
+
+    for file in files {
+        println!(
+            "Extracting {} into {}",
+            file.as_ref().display(),
+            merge_output.path().display()
+        );
+        extract(&extract_opts, file, merge_output.path())?;
+    }
+
+    println!("Creating new archive: {}", out.as_ref().display());
+    create(options, merge_output.path(), out)?;
+    Ok(())
 }
 
 // vim: fdm=marker
