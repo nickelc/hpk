@@ -36,6 +36,23 @@ jobs:
       - name: Test
         run: cargo test --all-features
 
+      - name: Build
+        run: cargo build --release
+
+      - name: Upload artifact
+        if: runner.os == 'Linux' || runner.os == 'macOS'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}
+          path: target/release/hpk
+
+      - name: Upload artifact (Win)
+        if: runner.os == 'Windows'
+        uses: actions/upload-artifact@v3
+        with:
+          name: ${{ runner.os }}
+          path: target/release/hpk.exe
+
   minrust:
     name: MSRV
     runs-on: ubuntu-latest
