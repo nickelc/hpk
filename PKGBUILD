@@ -1,7 +1,7 @@
 # Maintainer:
 
 pkgname=hpk
-pkgver=0.3.11
+pkgver=0.3.12
 pkgrel=1
 pkgdesc="HPK archiver for Haemimont Engine game files (Tropico 3-5, Omerta, Victor Vran, Surviving Mars etc.) "
 arch=('x86_64')
