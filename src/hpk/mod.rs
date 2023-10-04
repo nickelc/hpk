@@ -165,10 +165,10 @@ impl EntryType {
     }
 
     fn from_value(value: u32) -> Self {
-        if value == 0 {
-            Self::File
-        } else {
+        if value & 1 == 1 {
             Self::Dir
+        } else {
+            Self::File
         }
     }
 }
